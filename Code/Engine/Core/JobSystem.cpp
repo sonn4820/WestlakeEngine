@@ -71,10 +71,10 @@ void JobSystem::CreateWorkers(int num)
 
 void JobSystem::DestroyWorkers()
 {
-	for (size_t i = 0; i < m_workers.size(); i++)
+	for (auto & worker : m_workers)
 	{
-		delete m_workers[i];
-		m_workers[i] = nullptr;
+		delete worker;
+		worker = nullptr;
 	}
 
 	m_workers.clear();
@@ -193,17 +193,17 @@ void JobSystem::ClearAllJobs()
 	m_executingJobsMutex.lock();
 	m_completedJobsMutex.lock();
 
-	for (size_t i = 0; i < m_queuedJobs.size(); i++)
+	for (auto & queuedJob : m_queuedJobs)
 	{
-		delete m_queuedJobs[i];
+		delete queuedJob;
 	}
-	for (size_t i = 0; i < m_executingJobs.size(); i++)
+	for (auto & executingJob : m_executingJobs)
 	{
-		delete m_executingJobs[i];
+		delete executingJob;
 	}
-	for (size_t i = 0; i < m_completedJobs.size(); i++)
+	for (auto & completedJob : m_completedJobs)
 	{
-		delete m_completedJobs[i];
+		delete completedJob;
 	}
 
 	m_queuedJobs.clear();

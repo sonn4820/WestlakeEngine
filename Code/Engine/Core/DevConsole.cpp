@@ -34,7 +34,7 @@ bool DevConsole::Event_KeyPressed(EventArgs& args)
 	{
 		return false;
 	}
-	unsigned char keyCode = (unsigned char)args.GetValue("KeyCode", -1);
+	unsigned char keyCode = args.GetValue<unsigned char>("KeyCode", 0);
 	if (keyCode == KEYCODE_TIDLE)
 	{
 		g_theDevConsole->ToggleOpen();
@@ -147,7 +147,7 @@ bool DevConsole::Event_CharInput(EventArgs& args)
 	{
 		return false;
 	}
-	unsigned char keyCode = (unsigned char)args.GetValue("KeyCode", -1);
+	unsigned char keyCode = args.GetValue<unsigned char>("KeyCode", 0);
 	if (keyCode < 32 || keyCode > 126)
 	{
 		return false;
@@ -167,7 +167,7 @@ bool DevConsole::Command_Clear(EventArgs& args)
 
 bool DevConsole::Command_Echo(EventArgs& args)
 {
-	g_theDevConsole->AddLine(DevConsole::INFO_MINOR, args.GetValue("message", ""));
+	g_theDevConsole->AddLine(DevConsole::INFO_MINOR, args.GetValue<std::string>("message", ""));
 
 	return true;
 }
@@ -192,13 +192,14 @@ bool DevConsole::Command_SetTimeScale(EventArgs& args)
 	{
 		g_theDevConsole->AddLine(DevConsole::ERROR, "ERROR: Arguments are missing or incorrect, please use timescale s=<value>");
 	}
-	else 
+	else
 	{
-		float result = args.GetValue("s", 1.0f);
-		Clock::s_theSystemClock->SetTimeScale(result);
-		g_theDevConsole->AddLine(DevConsole::COMMAND_ECHO, "Time Scale is set to: " + std::to_string(result));
+		std::string result = args.GetValue<std::string>("s", "1.0");
+		float resultInFloat = (float)atof(result.c_str());
+		Clock::s_theSystemClock->SetTimeScale(resultInFloat);
+		g_theDevConsole->AddLine(DevConsole::SUCCESS, "Time Scale is set to: " + result);
 	}
-	
+
 	return true;
 }
 
@@ -210,10 +211,117 @@ bool DevConsole::Command_Print(EventArgs& args)
 	}
 	else
 	{
-		std::string result = args.GetValue("p", "");
-		g_theDevConsole->AddLine(DevConsole::INFO_MINOR, result);
+		std::string result = args.GetValue<std::string>("p", "");
+		g_theDevConsole->AddLine(DevConsole::SUCCESS, result);
 	}
 	return true;
+}
+
+bool DevConsole::Command_ExecuteXML(EventArgs& args)
+{
+	if (!args.IsKeyNameValid("file"))
+	{
+		g_theDevConsole->AddLine(DevConsole::ERROR, "ERROR: Arguments are missing or incorrect, please use file=<filePath>");
+	}
+	else
+	{
+		std::string s = args.GetValue<std::string>("file", "");
+		g_theDevConsole->AddLine(DevConsole::SUCCESS, "Loaded \"" + s + "\" successfully");
+		g_theDevConsole->ExecuteXmlCommandScriptFile(s);
+	}
+
+	return false;
+
+}
+
+bool DevConsole::Command_Test_ExecuteXML(EventArgs& args)
+{
+	std::string stringToPrint = args.GetValue<std::string>("p", "");
+	g_theDevConsole->AddLine(DevConsole::SUCCESS, stringToPrint);
+	std::string timeScale = args.GetValue<std::string>("s", "1.0");
+	float timeScaleInFloat = (float)atof(timeScale.c_str());
+	Clock::s_theSystemClock->SetTimeScale(timeScaleInFloat);
+	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Time Scale is set to: " + timeScale);
+
+	return true;
+}
+
+bool DevConsole::Command_TestFunction(EventArgs& args)
+{
+	UNUSED(args);
+	g_theDevConsole->AddLine(DevConsole::SUCCESS, "This is a test");
+	return true;
+}
+
+bool DevConsole::Command_TestSubFunction(EventArgs& args)
+{
+	UNUSED(args);
+	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Has subscribed test function");
+	g_theEventSystem->SubscribeEventCallbackFunction("test", DevConsole::Command_TestFunction);
+	return true;
+}
+
+bool DevConsole::Command_TestUnsubFunction(EventArgs& args)
+{
+	UNUSED(args);
+	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Has unsubscribed test function");
+	g_theEventSystem->UnsubscribeEventCallbackFunction("test", DevConsole::Command_TestFunction);
+	return true;
+}
+
+
+
+bool DevConsole::Command_TestUnsubMethod(EventArgs& args)
+{
+	std::string empty;
+	std::string idInString = args.GetValue("id", empty);
+	if (idInString == empty)
+	{
+		g_theDevConsole->AddLine(DevConsole::ERROR, "WRONG INPUT");
+	}
+	int id = atoi(idInString.c_str());
+	return g_theDevConsole->Test_UnsubMemberMethod(id);
+}
+
+bool DevConsole::Test_UnsubMemberMethod(int index)
+{
+	if (index == 0)
+	{
+		g_theDevConsole->AddLine(DevConsole::ERROR, "ID 0 doesn't exist");
+		return false;
+	}
+	// IN LIST TEST
+	for (size_t i = 0; i < m_test_Foo_List.size(); i++)
+	{
+		if ((i == index - 1) && m_test_Foo_List[i])
+		{
+			g_theDevConsole->AddLine(DevConsole::SUCCESS, "Has unsubscribed faa1 function");
+			g_theEventSystem->UnsubscribeEventCallbackMemberFunction("faa1", m_test_Foo_List[index - 1], &Foo::Laugh);
+			return true;
+		}
+	}
+	return false;
+
+
+
+	// SPECIFIC CALL OUT TEST
+	//if (index == 1)
+	//{
+	//	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Has unsubscribed faa1 function");
+	//	g_theEventSystem->UnsubscribeEventCallbackMemberFunction("faa1", m_faa1, &Faa::Laugh);
+	//}
+	//if (index == 2)
+	//{
+	//	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Has unsubscribed faa2 function");
+	//	g_theEventSystem->UnsubscribeEventCallbackMemberFunction("faa2", m_faa2, &Faa::Laugh);
+	//}
+	//if (index == 3)
+	//{
+	//	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Has unsubscribed fee function");
+	//	g_theEventSystem->UnsubscribeEventCallbackMemberFunction("fee", m_fee, &Fee::Laugh);
+	//}
+	// return true;
+
 }
 
 void DevConsole::Render_OpenFull(AABB2 const& bounds, Renderer& renderer, BitmapFont& font, float fontAspect) const
@@ -284,7 +392,7 @@ void DevConsole::Render_OpenFull(AABB2 const& bounds, Renderer& renderer, Bitmap
 		}
 
 		AddVertsForAABB2D(consoleInputInsertionPointVerts, insertionBox, DevConsole::INPUT_INSERTION_POINT);
-	
+
 		renderer.BindTexture(nullptr);
 		renderer.DrawVertexArray((int)consoleInputInsertionPointVerts.size(), consoleInputInsertionPointVerts.data());
 	}
@@ -314,9 +422,34 @@ void DevConsole::Startup()
 	g_theEventSystem->SubscribeEventCallbackFunction("echo", DevConsole::Command_Echo);
 	g_theEventSystem->SubscribeEventCallbackFunction("timescale", DevConsole::Command_SetTimeScale);
 	g_theEventSystem->SubscribeEventCallbackFunction("print", DevConsole::Command_Print);
+	g_theEventSystem->SubscribeEventCallbackFunction("xml", DevConsole::Command_ExecuteXML);
+	g_theEventSystem->SubscribeEventCallbackFunction("xmlTest", DevConsole::Command_Test_ExecuteXML);
+	g_theEventSystem->SubscribeEventCallbackFunction("subFunction", DevConsole::Command_TestSubFunction);
+	g_theEventSystem->SubscribeEventCallbackFunction("unsubFunction", DevConsole::Command_TestUnsubFunction);
+	g_theEventSystem->SubscribeEventCallbackFunction("unsubMethod", DevConsole::Command_TestUnsubMethod);
 	m_showFrameAndTime = false;
 	m_insertionPointBlinkTimer = new Timer(0.5f, Clock::s_theSystemClock);
 	m_insertionPointBlinkTimer->Start();
+
+	m_faa1 = new Faa();
+	m_faa1->m_ID = 1;
+	m_faa2 = new Faa();
+	m_faa2->m_ID = 2;
+	m_fee = new Fee();
+
+	//g_theEventSystem->SubscribeEventCallbackMemberFunction("faa1", m_faa1, &Faa::Laugh);
+	//g_theEventSystem->SubscribeEventCallbackMemberFunction("faa2",m_faa2, &Faa::Laugh);
+	//g_theEventSystem->SubscribeEventCallbackMemberFunction("fee", m_fee, &Fee::Laugh);
+
+	m_test_Foo_List.push_back(m_faa1);
+	m_test_Foo_List.push_back(m_faa2);
+	m_test_Foo_List.push_back(m_fee);
+
+	g_theEventSystem->SubscribeEventCallbackMemberFunction("faa1", (Foo*)m_faa1, &Foo::Laugh);
+	g_theEventSystem->SubscribeEventCallbackMemberFunction("faa2", (Foo*)m_faa2, &Foo::Laugh);
+	g_theEventSystem->SubscribeEventCallbackMemberFunction("fee", (Foo*)m_fee, &Foo::Laugh);
+
+
 }
 
 void DevConsole::BeginFrame()
@@ -353,32 +486,67 @@ void DevConsole::Execute(std::string const& consoleCommandText, bool echoCommand
 	EventArgs args;
 
 	Strings lineList = SplitStringOnDelimiter(consoleCommandText, '\n');
-	for (int lineIndex = 0; lineIndex < (int)lineList.size(); lineIndex++)
+	for (const auto& lineIndex : lineList)
 	{
-		Strings pairList = SplitStringWithQuotes(lineList[lineIndex], ' ');
-		std::string keyvalueHistory;
+		Strings pairList = SplitStringWithQuotes(lineIndex, ' ');
 		for (int pairIndex = 1; pairIndex < (int)pairList.size(); pairIndex++)
 		{
 			Strings pairElements = SplitStringWithQuotes(pairList[pairIndex], '=');
 			if (pairElements.size() > 1)
 			{
-				args.SetValue(pairElements[0], pairElements[1]);
-				if (!pairElements[0].empty() && !pairElements[1].empty())
-				{
-					keyvalueHistory = pairElements[0] + "=" + pairElements[1];
-				}
+				std::string value = pairElements[1];
+				TrimString(value, '\"');
+				args.SetValue(pairElements[0], value);
 			}
 		}
 
-		FireEvent(ToLower(pairList[0]), args);
+		FireEvent(pairList[0], args);
 
 		if (echoCommand)
 		{
 			g_theDevConsole->AddLine(DevConsole::COMMAND_ECHO, consoleCommandText);
 		}
-	}	
+	}
 
 	m_scrollOffset = 0;
+}
+
+void DevConsole::ExecuteXmlCommandScriptNode(XmlElement const& commandScriptXmlElement)
+{
+	const XmlElement* element = commandScriptXmlElement.FirstChildElement();
+
+	while (element)
+	{
+		std::string command = element->Name();
+		const XmlAttribute* a = element->FirstAttribute();
+		while (a)
+		{
+			std::string value = ParseXmlAttribute(*element, a->Name(), a->Value());
+			std::string name = a->Name();
+			command += (" " + name + "=" + "\"" + value + "\"");
+
+			a = a->Next();
+		}
+		Execute(command, false);
+		element = element->NextSiblingElement();
+	}
+}
+
+void DevConsole::ExecuteXmlCommandScriptFile(std::string& commandScriptXmlFilePathName)
+{
+	XmlDocument file;
+	XmlError result = file.LoadFile(commandScriptXmlFilePathName.c_str());
+	GUARANTEE_RECOVERABLE(result == tinyxml2::XML_SUCCESS, "FILE IS NOT LOADED");
+
+	XmlElement* rootElement = file.RootElement();
+	if (rootElement)
+	{
+		g_theDevConsole->ExecuteXmlCommandScriptNode(*rootElement);
+	}
+	else
+	{
+		GUARANTEE_RECOVERABLE(rootElement, "Root Element is null");
+	}
 }
 
 void DevConsole::AddLine(Rgba8 const& color, std::string const& text)
@@ -423,3 +591,16 @@ bool DevConsole::IsOpen()
 
 
 
+bool Faa::Laugh(EventArgs& args)
+{
+	UNUSED(args);
+	g_theDevConsole->AddLine(DevConsole::SUCCESS, Stringf("ID: %i laugh Hahahahaha", m_ID));
+	return true;
+}
+
+bool Fee::Laugh(EventArgs& args)
+{
+	UNUSED(args);
+	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Hehehehehe");
+	return true;
+}

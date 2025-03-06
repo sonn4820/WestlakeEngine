@@ -343,6 +343,15 @@
     <ClCompile Include="Core\Buffer.cpp">
       <Filter>Core</Filter>
     </ClCompile>
+    <ClCompile Include="Core\HashedCaseInsensitiveString.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Core\NamedProperties.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="Math\IntVec4.cpp">
+      <Filter>Math</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Math\Vec2.hpp">
@@ -677,6 +686,15 @@
     </ClInclude>
     <ClInclude Include="Core\Buffer.hpp">
       <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\HashedCaseInsensitiveString.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Core\NamedProperties.hpp">
+      <Filter>Core</Filter>
+    </ClInclude>
+    <ClInclude Include="Math\IntVec4.hpp">
+      <Filter>Math</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

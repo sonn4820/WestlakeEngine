@@ -8,6 +8,7 @@
 #include "Engine/Math/DoubleVec4.hpp"
 #include "Engine/Math/IntVec2.hpp"
 #include "Engine/Math/IntVec3.hpp"
+#include "Engine/Math/IntVec4.hpp"
 #include "Engine/Math/AABB2.hpp"
 #include "Engine/Math/AABB3.hpp"
 #include "Engine/Math/DoubleAABB3.hpp"
@@ -105,6 +106,8 @@ bool IsPointInsideOrientedSector2D(Vec2 const& point, Vec2 const& sectorTip, flo
 bool IsPointInsideDirectedSector2D(Vec2 const& point, Vec2 const& sectorTip, Vec2 const& sectorForwardNormal, float sectorApertureDegrees, float sectorRadius);
 
 bool DoDiscsOverlap2D(Vec2 const& centerA, float radiusA, Vec2 const& centerB, float radiusB);
+bool DoDiscOverlapAABB2D(Vec2 const& center, float radius, AABB2 const& box);
+bool DoDiscOverlapCapsule2D(Vec2 const& center, float radius, Capsule2 const& capsule);
 bool DoAABBsOverlap2D(AABB2 const& boxA, AABB2 const& boxB);
 bool DoCapsuleAndPlaneOverlap2D(Capsule2 const& capsule, Vec2 planeStart, Vec2 planeEnd);
 
@@ -232,6 +235,7 @@ void TransformPositionXY3D(Vec3& positionToTransform, float scaleXY, float zRota
 void TransformPositionXY3D(Vec3& positionToTransform, Vec2 const& iBasis, Vec2 const& jBasis, Vec2 const& translation);
 
 // Clamp and lerp
+int Clamp(int value, int minValue, int maxValue);
 float Clamp(float value, float minValue, float maxValue);
 Vec3 Clamp(Vec3 value, Vec3 minValue, Vec3 maxValue);
 Vec2 Clamp(Vec2 value, Vec2 minValue, Vec2 maxValue);
