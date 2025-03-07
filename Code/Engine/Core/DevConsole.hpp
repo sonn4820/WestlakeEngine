@@ -6,6 +6,7 @@
 #include "Engine/Core/EventSystem.hpp"
 #include "Engine/Core/Clock.hpp"
 #include "Engine/Core/Timer.hpp"
+#include "Engine/Core/FileUtils.hpp"
 #include <string>
 #include <vector>
 #include <mutex>
@@ -97,7 +98,11 @@ public:
 	static bool Command_SetTimeScale(EventArgs& args);
 	static bool Command_Print(EventArgs& args);
 
-	// SD 4 Testing function
+	// SD 4 A2 functions
+	static bool Command_TestBinaryFileLoad(EventArgs& args);
+	static bool Command_TestBinaryFileSave(EventArgs& args);
+
+	// SD 4 A3 Testing function
 	static bool Command_ExecuteXML(EventArgs& args);
 	static bool Command_Test_ExecuteXML(EventArgs& args);
 	static bool Command_TestFunction(EventArgs& args);
@@ -132,3 +137,5 @@ protected:
 	int							m_scrollOffset = 0;
 };
 
+void AppendTestFileBufferData(BufferWriter& bufferWriter, EndianMode endianMode);
+void ParseTestFileBufferData(BufferParser& bufferParser, EndianMode endianMode);

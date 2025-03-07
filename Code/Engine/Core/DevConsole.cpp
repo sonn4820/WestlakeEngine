@@ -5,6 +5,7 @@
 #include "Engine/Core/EventSystem.hpp"
 #include "Engine/Renderer/Camera.hpp"
 #include "Engine/Network/NetworkSystem.hpp"
+#include "Engine/Core/FileUtils.hpp"
 
 #ifdef ERROR
 #undef ERROR
@@ -216,7 +217,65 @@ bool DevConsole::Command_Print(EventArgs& args)
 	}
 	return true;
 }
+bool DevConsole::Command_TestBinaryFileLoad(EventArgs& args)
+{
+	UNUSED(args);
 
+	const char* testFilePath = "Saves/Test.binary";
+	g_theDevConsole->AddLine(DevConsole::INFO_MINOR, Stringf("Loading test binary file '%s'...\n", testFilePath));
+
+	// Load from disk
+	std::vector<unsigned char> buffer;
+	bool success = LoadBinaryFileToExistingBuffer(testFilePath, buffer);
+	if (!success)
+	{
+		g_theDevConsole->AddLine(DevConsole::ERROR, Stringf("FAILED to load file %s\n", testFilePath));
+		return false;
+	}
+
+	// Parse and verify
+	BufferParser bufParser(buffer);
+	//GUARANTEE_RECOVERABLE( bufParser.GetRemainingSize() == TEST_BUF_SIZE, "ERROR"); // should be 208 Bytes total (two copies of the Test buffer content)
+	//ParseTestFileBufferData(bufParser, EndianMode::LITTLE); // First, the test content in little-endian format
+	ParseTestFileBufferData(bufParser, EndianMode::BIG); // Second, the same test content again, but in big-endian format
+	//GUARANTEE_RECOVERABLE( bufParser.GetRemainingSize() == 0, "ERROR");
+
+	g_theDevConsole->AddLine(DevConsole::SUCCESS, Stringf("...successfully read file %s\n", testFilePath));
+	return false;
+};
+
+//-----------------------------------------------------------------------------------------------
+bool DevConsole::Command_TestBinaryFileSave(EventArgs& args)
+{
+	UNUSED(args);
+
+	const char* testFilePath = "Saves/Test.binary";
+	g_theDevConsole->AddLine(DevConsole::INFO_MINOR, Stringf("Saving test binary file '%s'...\n", testFilePath));
+
+	// Create the test file buffer
+	std::vector<unsigned char> buffer;
+	buffer.reserve(1000);
+	BufferWriter bufWriter(buffer);
+	//GUARANTEE_RECOVERABLE_NOREPEAT0( bufWriter.GetTotalSize() == 0 );
+	//GUARANTEE_RECOVERABLE_NOREPEAT0( bufWriter.GetAppendedSize() == 0 );
+	AppendTestFileBufferData(bufWriter, EndianMode::LITTLE); // First, the test content in little-endian format
+	//AppendTestFileBufferData(bufWriter, EndianMode::BIG);// Second, the same test content again, but in big-endian format
+	//GUARANTEE_RECOVERABLE_NOREPEAT0( bufWriter.GetAppendedSize() == TEST_BUF_SIZE ); // should be 208 Bytes total (two copies of the Test buffer content)
+	//GUARANTEE_RECOVERABLE_NOREPEAT0( bufWriter.GetTotalSize() == TEST_BUF_SIZE );
+
+	// Write to disk
+	bool success = SaveBinaryFileFromBuffer(testFilePath, buffer);
+	if (success)
+	{
+		g_theDevConsole->AddLine(DevConsole::SUCCESS, Stringf("...successfully wrote file %s\n", testFilePath));
+	}
+	else
+	{
+		g_theDevConsole->AddLine(DevConsole::ERROR, Stringf("FAILED to write file %s\n", testFilePath));
+	}
+
+	return false;
+};
 bool DevConsole::Command_ExecuteXML(EventArgs& args)
 {
 	if (!args.IsKeyNameValid("file"))
@@ -427,6 +486,8 @@ void DevConsole::Startup()
 	g_theEventSystem->SubscribeEventCallbackFunction("subFunction", DevConsole::Command_TestSubFunction);
 	g_theEventSystem->SubscribeEventCallbackFunction("unsubFunction", DevConsole::Command_TestUnsubFunction);
 	g_theEventSystem->SubscribeEventCallbackFunction("unsubMethod", DevConsole::Command_TestUnsubMethod);
+	g_theEventSystem->SubscribeEventCallbackFunction("loadfile", DevConsole::Command_TestBinaryFileLoad);
+	g_theEventSystem->SubscribeEventCallbackFunction("savefile", DevConsole::Command_TestBinaryFileSave);
 	m_showFrameAndTime = false;
 	m_insertionPointBlinkTimer = new Timer(0.5f, Clock::s_theSystemClock);
 	m_insertionPointBlinkTimer->Start();
@@ -589,8 +650,6 @@ bool DevConsole::IsOpen()
 	return open;
 }
 
-
-
 bool Faa::Laugh(EventArgs& args)
 {
 	UNUSED(args);
@@ -604,3 +663,85 @@ bool Fee::Laugh(EventArgs& args)
 	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Hehehehehe");
 	return true;
 }
+
+
+void AppendTestFileBufferData(BufferWriter& bufferWriter, EndianMode endianMode)
+{
+	bufferWriter.SetPreferredEndianMode(endianMode);
+	bufferWriter.AppendChar('T');
+	bufferWriter.AppendChar('E');
+	bufferWriter.AppendChar('S');
+	bufferWriter.AppendChar('T');
+	bufferWriter.AppendByte(2); // Version 2
+	bufferWriter.AppendByte((unsigned char)bufferWriter.GetPreferredEndianMode());
+	bufferWriter.AppendBool(false);
+	bufferWriter.AppendBool(true);
+	bufferWriter.AppendUint32(0x12345678);
+	bufferWriter.AppendInt32(-7); // signed 32-bit int
+	bufferWriter.AppendFloat(1.f); // in memory looks like hex: 00 00 80 3F (or 3F 80 00 00 in big endian)
+	bufferWriter.AppendDouble(3.1415926535897932384626433832795); // actually 3.1415926535897931 (best it can do)
+	bufferWriter.AppendZeroTerminatedString("Hello"); // written with a trailing 0 ('\0') after (6 bytes total)
+	bufferWriter.AppendStringAfter32BitLength("Is this thing on?"); // uint 17, then 17 chars (no zero-terminator after)
+	bufferWriter.AppendRgba8(Rgba8(200, 100, 50, 255)); // four bytes in RGBA order (endian-independent)
+	bufferWriter.AppendByte(8); // 0x08 == 8 (byte)
+	bufferWriter.AppendRgb8(Rgba8(238, 221, 204, 255)); // written as 3 bytes (RGB) only; ignores Alpha
+	bufferWriter.AppendByte(9); // 0x09 == 9 (byte)
+	bufferWriter.AppendIntVec2(IntVec2(1920, 1080));
+	bufferWriter.AppendVec2(Vec2(-0.6f, 0.8f));
+	bufferWriter.AppendVertexPCU(Vertex_PCU(Vec3(3.f, 4.f, 5.f), Rgba8(100, 101, 102, 103), Vec2(0.125f, 0.625f)));
+};
+
+//------------------------------------------------------------------------------------------------
+void ParseTestFileBufferData(BufferParser& bufferParser, EndianMode endianMode)
+{
+	// Parse known test file elements
+	bufferParser.SetBufferEndianMode(endianMode);
+	char fourCC0_T = bufferParser.ParseChar(); // 'T' == 0x54 hex == 84 decimal
+	char fourCC1_E = bufferParser.ParseChar(); // 'E' == 0x45 hex == 84 decimal
+	char fourCC2_S = bufferParser.ParseChar(); // 'S' == 0x53 hex == 69 decimal
+	char fourCC3_T = bufferParser.ParseChar(); // 'T' == 0x54 hex == 84 decimal
+	unsigned char version = bufferParser.ParseByte(); // version 2
+	bufferParser.ParseByte();
+	bool shouldBeFalse = bufferParser.ParseBool(); // written in buffer as byte 0 or 1
+	bool shouldBeTrue = bufferParser.ParseBool(); // written in buffer as byte 0 or 1
+	unsigned int largeUint = bufferParser.ParseUint32(); // 0x12345678
+	int negativeSeven = bufferParser.ParseInt32(); // -7 (as signed 32-bit int)
+	float oneF = bufferParser.ParseFloat(); // 1.0f
+	double pi = bufferParser.ParseDouble(); // 3.1415926535897932384626433832795 (or as best it can)
+
+	std::string helloString, isThisThingOnString;
+	bufferParser.ParseZeroTerminatedString(helloString); // written with a trailing 0 ('\0') after (6 bytes total)
+	bufferParser.ParseStringAfter32BitLength(isThisThingOnString); // written as uint 17, then 17 characters (no zero-terminator after)
+
+	Rgba8 rustColor = bufferParser.ParseRgba8(); // Rgba( 200, 100, 50, 255 )
+	unsigned char eight = bufferParser.ParseByte(); // 0x08 == 8 (byte)
+	Rgba8 seashellColor = bufferParser.ParseRgb8(); // Rgba(238,221,204) written as 3 bytes (RGB) only; ignores Alpha
+	unsigned char nine = bufferParser.ParseByte(); // 0x09 == 9 (byte)
+	IntVec2 highDefRes = bufferParser.ParseIntVec2(); // IntVector2( 1920, 1080 )
+	Vec2 normal2D = bufferParser.ParseVec2(); // Vector2( -0.6f, 0.8f )
+	Vertex_PCU vertex = bufferParser.ParseVertexPCU(); // VertexPCU( 3.f, 4.f, 5.f, Rgba(100,101,102,103), 0.125f, 0.625f ) );
+
+	// Validate actual values parsed
+	GUARANTEE_RECOVERABLE(fourCC0_T == 'T', "ERROR");
+	GUARANTEE_RECOVERABLE(fourCC1_E == 'E', "ERROR");
+	GUARANTEE_RECOVERABLE(fourCC2_S == 'S', "ERROR");
+	GUARANTEE_RECOVERABLE(fourCC3_T == 'T', "ERROR");
+	GUARANTEE_RECOVERABLE(version == 2, "ERROR");
+	GUARANTEE_RECOVERABLE(shouldBeFalse == false, "ERROR");
+	GUARANTEE_RECOVERABLE(shouldBeTrue == true, "ERROR");
+	GUARANTEE_RECOVERABLE(largeUint == 0x12345678, "ERROR");
+	GUARANTEE_RECOVERABLE(negativeSeven == -7, "ERROR");
+	GUARANTEE_RECOVERABLE(oneF == 1.f, "ERROR");
+	GUARANTEE_RECOVERABLE(pi == 3.1415926535897931, "ERROR");
+	GUARANTEE_RECOVERABLE(helloString == "Hello", "ERROR");
+	GUARANTEE_RECOVERABLE(isThisThingOnString == "Is this thing on?", "ERROR");
+	GUARANTEE_RECOVERABLE(rustColor == Rgba8(200, 100, 50, 255), "ERROR");
+	GUARANTEE_RECOVERABLE(eight == 8, "ERROR");
+	GUARANTEE_RECOVERABLE(seashellColor == Rgba8(238, 221, 204, 255), "ERROR");
+	GUARANTEE_RECOVERABLE(nine == 9, "ERROR");
+	GUARANTEE_RECOVERABLE(highDefRes == IntVec2(1920, 1080), "ERROR");
+	GUARANTEE_RECOVERABLE(normal2D == Vec2(-0.6f, 0.8f), "ERROR");
+	GUARANTEE_RECOVERABLE(vertex.m_position == Vec3(3.f, 4.f, 5.f), "ERROR");
+	GUARANTEE_RECOVERABLE(vertex.m_color == Rgba8(100, 101, 102, 103), "ERROR");
+	GUARANTEE_RECOVERABLE(vertex.m_uvTexCoords == Vec2(0.125f, 0.625f), "ERROR");
+};
