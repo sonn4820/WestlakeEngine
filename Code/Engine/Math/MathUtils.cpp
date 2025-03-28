@@ -40,6 +40,11 @@ float SinDegrees(float degrees)
 	return sinf(ConvertDegreesToRadians(degrees));
 }
 
+float TanDegrees(float degrees)
+{
+	return tanf(ConvertDegreesToRadians(degrees));
+}
+
 float Atan2Degrees(float y, float x)
 {
 	return ConvertRadiansToDegrees(atan2f(y, x));
@@ -250,9 +255,7 @@ bool IsPointInsidePolygon2D(Vec2 const& point, std::vector<Vec2> polygon)
 
 	for (size_t i = 0, j = n - 1; i < n; j = i++)
 	{
-		if (((polygon[i].y > point.y) != (polygon[j].y > point.y)) &&
-			(point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) /
-				(polygon[j].y - polygon[i].y) + polygon[i].x))
+		if (((polygon[i].y > point.y) != (polygon[j].y > point.y)) && (point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x))
 		{
 			inside = !inside;
 		}

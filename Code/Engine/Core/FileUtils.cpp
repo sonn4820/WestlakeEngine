@@ -604,7 +604,7 @@ void BufferParser::ParseStringAfter32BitLength(std::string& stringValue)
 {
 	uint32_t stringLength = ParseUint32();
 
-	for (int i = 0; i < stringLength; i++)
+	for (uint32_t i = 0; i < stringLength; i++)
 	{
 		char character = ParseChar();
 		stringValue.push_back(character);

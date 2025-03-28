@@ -65,7 +65,11 @@ void EventSystem::FireEvent(std::string const& eventName, EventArgs& arg)
 
 	for (const std::pair<HashedCaseInsensitiveString, SubscriptionList>& pair : m_subscriptionListByEventName)
 	{
-		if (pair.first == eventToFire) existedEvent = pair.first;
+		if (pair.first == eventToFire)
+		{
+			existedEvent = pair.first;
+			break;
+		}
 	}
 	auto found = m_subscriptionListByEventName.find(existedEvent);
 	if (found != m_subscriptionListByEventName.end())

@@ -155,7 +155,7 @@ bool DevConsole::Event_CharInput(EventArgs& args)
 	}
 	g_theDevConsole->m_inputText.insert(g_theDevConsole->m_inputText.begin() + g_theDevConsole->m_insertionPointPosition, keyCode);
 	g_theDevConsole->m_insertionPointPosition++;
-	return true;
+	return false;
 }
 
 bool DevConsole::Command_Clear(EventArgs& args)
@@ -163,14 +163,14 @@ bool DevConsole::Command_Clear(EventArgs& args)
 	UNUSED(args);
 	g_theDevConsole->m_lines.clear();
 	g_theDevConsole->m_scrollOffset = 0;
-	return true;
+	return false;
 }
 
 bool DevConsole::Command_Echo(EventArgs& args)
 {
 	g_theDevConsole->AddLine(DevConsole::INFO_MINOR, args.GetValue<std::string>("message", ""));
 
-	return true;
+	return false;
 }
 
 bool DevConsole::Command_Help(EventArgs& args)
@@ -184,7 +184,7 @@ bool DevConsole::Command_Help(EventArgs& args)
 		g_theDevConsole->AddLine(DevConsole::INFO_MINOR, std::to_string(i + 1) + ". " + eventList[i]);
 	}
 	g_theDevConsole->AddLine(DevConsole::INFO_MAJOR, "_____________________________");
-	return true;
+	return false;
 }
 
 bool DevConsole::Command_SetTimeScale(EventArgs& args)
@@ -201,7 +201,7 @@ bool DevConsole::Command_SetTimeScale(EventArgs& args)
 		g_theDevConsole->AddLine(DevConsole::SUCCESS, "Time Scale is set to: " + result);
 	}
 
-	return true;
+	return false;
 }
 
 bool DevConsole::Command_Print(EventArgs& args)
@@ -215,7 +215,7 @@ bool DevConsole::Command_Print(EventArgs& args)
 		std::string result = args.GetValue<std::string>("p", "");
 		g_theDevConsole->AddLine(DevConsole::SUCCESS, result);
 	}
-	return true;
+	return false;
 }
 bool DevConsole::Command_TestBinaryFileLoad(EventArgs& args)
 {
@@ -290,7 +290,6 @@ bool DevConsole::Command_ExecuteXML(EventArgs& args)
 	}
 
 	return false;
-
 }
 
 bool DevConsole::Command_Test_ExecuteXML(EventArgs& args)
@@ -302,14 +301,14 @@ bool DevConsole::Command_Test_ExecuteXML(EventArgs& args)
 	Clock::s_theSystemClock->SetTimeScale(timeScaleInFloat);
 	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Time Scale is set to: " + timeScale);
 
-	return true;
+	return false;
 }
 
 bool DevConsole::Command_TestFunction(EventArgs& args)
 {
 	UNUSED(args);
 	g_theDevConsole->AddLine(DevConsole::SUCCESS, "This is a test");
-	return true;
+	return false;
 }
 
 bool DevConsole::Command_TestSubFunction(EventArgs& args)
@@ -317,7 +316,7 @@ bool DevConsole::Command_TestSubFunction(EventArgs& args)
 	UNUSED(args);
 	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Has subscribed test function");
 	g_theEventSystem->SubscribeEventCallbackFunction("test", DevConsole::Command_TestFunction);
-	return true;
+	return false;
 }
 
 bool DevConsole::Command_TestUnsubFunction(EventArgs& args)
@@ -325,7 +324,7 @@ bool DevConsole::Command_TestUnsubFunction(EventArgs& args)
 	UNUSED(args);
 	g_theDevConsole->AddLine(DevConsole::SUCCESS, "Has unsubscribed test function");
 	g_theEventSystem->UnsubscribeEventCallbackFunction("test", DevConsole::Command_TestFunction);
-	return true;
+	return false;
 }
 
 
