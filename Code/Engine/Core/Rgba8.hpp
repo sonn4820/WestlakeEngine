@@ -21,6 +21,7 @@ public:
 	static Rgba8 COLOR_TRANSPARENT;
 	static Rgba8 COLOR_RED;
 	static Rgba8 COLOR_DARK_RED;
+	static Rgba8 COLOR_BRIGHT_RED;
 	static Rgba8 COLOR_PINK;
 	static Rgba8 COLOR_GREEN;
 	static Rgba8 COLOR_DARK_GREEN;
@@ -36,6 +37,7 @@ public:
 	static Rgba8 COLOR_BRIGHT_BLUE;
 	static Rgba8 COLOR_DARK_BLUE;
 	static Rgba8 COLOR_LIGHT_GRAY;
+	static Rgba8 COLOR_BRIGHT_WHITE;
 	static Rgba8 COLOR_RAGDOLL_CONSTRAINT;
 	static Rgba8 COLOR_RAGDOLL_NODE;
 	
@@ -56,5 +58,5 @@ public:
 	static Rgba8 Create_WithFloatMultiplier(Rgba8 original, float rM, float gM, float bM, float aM = 1.f);
 
 	static Rgba8 GetDarkerColor(Rgba8 color, float percentageZeroToOne);
-	static Rgba8 GetRandomColor(bool randomAlpha = false, int offsetSeed = 0);
+	static Rgba8 GetRandomColor(bool randomAlpha = false);
 };

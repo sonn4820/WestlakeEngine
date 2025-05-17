@@ -146,7 +146,6 @@ void AudioSystem::StopSound(SoundPlaybackID soundPlaybackID)
 {
 	if (soundPlaybackID == MISSING_SOUND_ID)
 	{
-		ERROR_RECOVERABLE("WARNING: attempt to stop sound on missing sound playback ID!");
 		return;
 	}
 

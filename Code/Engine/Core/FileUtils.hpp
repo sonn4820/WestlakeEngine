@@ -10,7 +10,7 @@ int FileReadToString(std::string& outString, const std::string& fileName);
 bool FileWriteFromBuffer(std::vector<uint8_t> const& buffer, std::string const& filePathName);
 bool CreateFolder(std::string const& folderPathName);
 bool HasFile(std::string const& folderPathName);
-void WriteBufferToFile(std::vector<uint8_t> const& buffer, std::string const& filename);
+bool WriteBufferToFile(std::vector<unsigned char>& outBuffer, std::string const& fileName);
 
 bool LoadBinaryFileToExistingBuffer(std::string filePath, std::vector<unsigned char>& outBuffer);
 bool SaveBinaryFileFromBuffer(std::string filePath, std::vector<unsigned char> inBuffer);

@@ -15,6 +15,7 @@ Rgba8 Rgba8::COLOR_TRANSPARENT = Rgba8(0, 0, 0, 0);
 
 Rgba8 Rgba8::COLOR_RED = Rgba8(255, 0, 0);
 Rgba8 Rgba8::COLOR_DARK_RED = Rgba8(127, 0, 0);
+Rgba8 Rgba8::COLOR_BRIGHT_RED = Rgba8(170, 0, 0);
 Rgba8 Rgba8::COLOR_PINK = Rgba8(255, 192, 203);
 Rgba8 Rgba8::COLOR_GREEN = Rgba8(0, 255, 0);
 Rgba8 Rgba8::COLOR_DARK_GREEN = Rgba8(0, 127, 0);
@@ -31,6 +32,7 @@ Rgba8 Rgba8::COLOR_LIGHT_BLUE = Rgba8(73, 216, 230);
 Rgba8 Rgba8::COLOR_BRIGHT_BLUE = Rgba8(0, 150, 255);
 Rgba8 Rgba8::COLOR_DARK_BLUE = Rgba8(0, 20, 120);
 Rgba8 Rgba8::COLOR_LIGHT_GRAY = Rgba8(170, 170, 170);
+Rgba8 Rgba8::COLOR_BRIGHT_WHITE = Rgba8(230, 230, 230);
 Rgba8 Rgba8::COLOR_RAGDOLL_CONSTRAINT = Rgba8(0, 136, 159);
 Rgba8 Rgba8::COLOR_RAGDOLL_NODE = Rgba8(102, 184, 197);
 
@@ -180,10 +182,9 @@ Rgba8 Rgba8::GetDarkerColor(Rgba8 color, float percentageZeroToOne)
 	return Rgba8::Create_FromFloat(newR, newG, newB, color.a);
 }
 
-Rgba8 Rgba8::GetRandomColor(bool randomAlpha, int offsetSeed)
+Rgba8 Rgba8::GetRandomColor(bool randomAlpha)
 {
-	srand((int)time(nullptr));
-	auto rng = RandomNumberGenerator(rand() + offsetSeed);
+	static auto rng = RandomNumberGenerator(rand());
 
 	float newR = rng.RollRandomFloatZeroToOne();
 	float newG = rng.RollRandomFloatZeroToOne();

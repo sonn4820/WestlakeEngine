@@ -21,6 +21,7 @@ public:
 	explicit Capsule3(Vec3 start, Vec3 end, float radius);
 
 	Vec3 GetAxis() const;
+	Vec3 GetCenter() const;
 	Vec3 GetAxisNormal() const;
 	float GetAxisLength() const;
 	float GetAxisHalfLength() const;

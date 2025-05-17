@@ -1,5 +1,8 @@
 #include "Engine/Core/JobSystem.hpp"
 
+std::mutex g_newJobAvailableMutex;
+std::condition_variable g_newJobAvailable;
+
 JobWorker::JobWorker(int id, JobSystem* system)
 {
 	m_id = id;
@@ -24,9 +27,17 @@ void JobWorker::ThreadMain()
 		}
 		else
 		{
-			std::this_thread::sleep_for(std::chrono::microseconds(1));
+			//std::this_thread::sleep_for(std::chrono::microseconds(1));
+
+			std::unique_lock unqLock(g_newJobAvailableMutex);
+			g_newJobAvailable.wait(unqLock);
 		}
 	}
+}
+
+void JobWorker::Join()
+{
+	m_thread->join();
 }
 
 JobSystem::JobSystem(JobSystemConfig config)
@@ -57,6 +68,7 @@ void JobSystem::EndFrame()
 void JobSystem::Shutdown()
 {
 	m_isShuttingDown = true;
+	g_newJobAvailable.notify_all();
 	DestroyWorkers();
 }
 
@@ -67,6 +79,11 @@ void JobSystem::CreateWorkers(int num)
 		JobWorker* newWorker = new JobWorker(i, this);
 		m_workers.push_back(newWorker);
 	}
+}
+
+JobWorker* JobSystem::GetWorker(int id)
+{
+	return m_workers[id];
 }
 
 void JobSystem::DestroyWorkers()
@@ -91,6 +108,8 @@ void JobSystem::QueueJob(Job* jobToQueue)
 	jobToQueue->m_state = JobState::QUEUED;
 	m_queuedJobs.push_back(jobToQueue);
 	m_queuedJobsMutex.unlock();
+
+	g_newJobAvailable.notify_one();
 }
 
 Job* JobSystem::ClaimJob(JobWorker* worker)
@@ -237,4 +256,9 @@ void JobSystem::SetWorkerThreadJobFlags(unsigned int bitflags, int num)
 		}
 	}
 
+}
+
+void JobSystem::SetWorkerThreadIDJobFlags(unsigned int bitflags, int id)
+{
+	m_workers[id]->m_jobTypeBitflags = bitflags;
 }

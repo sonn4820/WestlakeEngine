@@ -143,6 +143,13 @@ void Button::Render() const
 	m_canvas->GetSystemRenderer()->SetRasterizerMode(RasterizerMode::SOLID_CULL_NONE);
 	m_canvas->GetSystemRenderer()->SetBlendMode(BlendMode::ALPHA);
 
+	if (m_borderBuffer)
+	{
+		m_canvas->GetSystemRenderer()->SetModelConstants(Mat44(), m_borderColor);
+		m_canvas->GetSystemRenderer()->BindTexture(nullptr);
+		m_canvas->GetSystemRenderer()->DrawVertexBuffer(m_borderBuffer, m_borderVerts.size());
+	}
+
 	if (m_buttonBuffer)
 	{
 		m_canvas->GetSystemRenderer()->SetModelConstants(Mat44(), m_currentColor);
@@ -173,6 +180,9 @@ void Button::Shutdown()
 	delete m_buttonBuffer;
 	m_buttonBuffer = nullptr;
 
+	delete m_borderBuffer;
+	m_borderBuffer = nullptr;
+
 	for (size_t i = 0; i < m_children.size(); i++)
 	{
 		if (m_children[i])
@@ -198,8 +208,8 @@ void Button::SetBound(AABB2 bound)
 	m_bound = bound;
 	if (m_hasBorder)
 	{
-		AddVertsForAABB2D(m_buttonVerts, m_bound, m_borderColor);
-		AddVertsForAABB2D(m_buttonVerts, m_bound.AddOffSet(5.f));
+		AddVertsForAABB2DOutline(m_borderVerts, m_bound, Rgba8::COLOR_WHITE, 5.f);
+		AddVertsForAABB2D(m_buttonVerts, m_bound.AddOffSet(2.5f));
 	}
 	else
 	{
@@ -208,6 +218,9 @@ void Button::SetBound(AABB2 bound)
 	
 	m_buttonBuffer = m_canvas->GetSystemRenderer()->CreateVertexBuffer(sizeof(Vertex_PCU) * (int)m_buttonVerts.size());
 	m_canvas->GetSystemRenderer()->CopyCPUToGPU(m_buttonVerts.data(), (int)m_buttonVerts.size() * sizeof(Vertex_PCU), m_buttonBuffer);
+
+	m_borderBuffer = m_canvas->GetSystemRenderer()->CreateVertexBuffer(sizeof(Vertex_PCU) * (int)m_borderVerts.size());
+	m_canvas->GetSystemRenderer()->CopyCPUToGPU(m_borderVerts.data(), (int)m_borderVerts.size() * sizeof(Vertex_PCU), m_borderBuffer);
 }
 
 void Button::SetText(TextSetting textSetting)

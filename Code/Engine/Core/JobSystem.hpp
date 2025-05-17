@@ -43,6 +43,9 @@ class JobWorker
 
 	void ThreadMain();
 
+public:
+	void Join();
+
 private:
 	int m_id = -1;
 	std::atomic<unsigned int> m_jobTypeBitflags = 1;
@@ -65,6 +68,7 @@ public:
 	JobSystemConfig m_config;
 
 	void CreateWorkers(int num);
+	JobWorker* GetWorker(int id);
 	void DestroyWorkers();
 	size_t GetWorkersSize() const;
 	void QueueJob(Job* jobToQueue);
@@ -76,6 +80,7 @@ public:
 
 	void ClearAllJobs();
 	void SetWorkerThreadJobFlags(unsigned int bitflags, int num);
+	void SetWorkerThreadIDJobFlags(unsigned int bitflags, int id);
 
 private:
 	std::vector<JobWorker*> m_workers;

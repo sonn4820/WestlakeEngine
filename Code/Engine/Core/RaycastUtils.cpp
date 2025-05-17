@@ -656,17 +656,73 @@ RaycastResult3D RaycastVsCapsule3D(Vec3 startPos, Vec3 fwdNormal, float maxDist,
 		return result;
 	}
 
-	LineSegment3 ray(startPos, startPos + fwdNormal * maxDist);
+	Vec3 center = capsule.GetCenter();
+	Vec3 kBasis = capsule.GetAxis().GetNormalized();
+	Vec3 iBasis;
+	Vec3 jBasis;
+
+	if (fabs(DotProduct3D(kBasis, Vec3(1.f, 0.f, 0.f))) < 0.999f)
+	{
+		jBasis = CrossProduct3D(Vec3(1.f, 0.f, 0.f), kBasis).GetNormalized();
+		iBasis = CrossProduct3D(jBasis, kBasis);
+	}
+	else
+	{
+		iBasis = CrossProduct3D(kBasis, Vec3(0.f, 1.f, 0.f)).GetNormalized();
+		jBasis = CrossProduct3D(kBasis, iBasis);
+	}
+
+	Mat44 capsuleLtoW;
+	capsuleLtoW.SetIJKT3D(iBasis, jBasis, kBasis, center);
+	Mat44 capsuleWtoL = capsuleLtoW.GetOrthonormalInverse();
+
+	Vec3 s = capsuleWtoL.TransformPosition3D(startPos);
+	Vec3 f = capsuleWtoL.TransformVectorQuantity3D(fwdNormal);
+
+	Vec3 startLocal = capsuleWtoL.TransformPosition3D(capsule.m_start);
+	Vec3 endLocal = capsuleWtoL.TransformPosition3D(capsule.m_end);
+
+	RaycastResult3D resultCyl = RaycastVsZCynlinder3DNoCap(s, f, maxDist, Vec2(startLocal.x, startLocal.y), FloatRange(startLocal.z, endLocal.z), capsule.m_radius);
+	RaycastResult3D resultSS = RaycastVsSphere3D(s, f, maxDist, startLocal, capsule.m_radius);
+	RaycastResult3D resultSE = RaycastVsSphere3D(s, f, maxDist, endLocal, capsule.m_radius);
+
+	if (resultCyl.m_didImpact)
+	{
+		result.m_didImpact = resultCyl.m_didImpact;
+		result.m_impactPos = capsuleLtoW.TransformPosition3D(resultCyl.m_impactPos);
+		result.m_impactNormal = capsuleLtoW.TransformVectorQuantity3D(resultCyl.m_impactNormal);
+		result.m_impactDist = (result.m_impactPos - startPos).GetLength();
+	}
 
 
-	//if (result.m_didImpact)
-	//{
-	//	bestCapsule = GetNearestPointOnLineSegment3D(capsule.m_start, capsule.m_end, bestRay);
-	//	Vec3 ToBestRayNormal = (bestRay - bestCapsule).GetNormalized();
-	//	result.m_impactPos = bestCapsule + ToBestRayNormal * capsule.m_radius;
-	//	result.m_impactDist = (result.m_impactPos - startPos).GetLength();
-	//	result.m_impactNormal = ToBestRayNormal;
-	//}
+	int hitStart = -1;
+	if (resultSS.m_didImpact && resultSE.m_didImpact)
+	{
+		if (resultSS.m_impactDist < resultSE.m_impactDist)
+		{
+			hitStart = 1;
+		}
+		else
+		{
+			hitStart = 0;
+		}
+	}
+
+	if (resultSS.m_didImpact && (hitStart == - 1 || hitStart == 1) && !resultCyl.m_didImpact)
+	{
+		result.m_didImpact = resultSS.m_didImpact;
+		result.m_impactPos = capsuleLtoW.TransformPosition3D(resultSS.m_impactPos);
+		result.m_impactNormal = capsuleLtoW.TransformVectorQuantity3D(resultSS.m_impactNormal);
+		result.m_impactDist = (result.m_impactPos - startPos).GetLength();
+	}
+
+	if (resultSE.m_didImpact && (hitStart == -1 || hitStart == 0) && !resultCyl.m_didImpact)
+	{
+		result.m_didImpact = resultSE.m_didImpact;
+		result.m_impactPos = capsuleLtoW.TransformPosition3D(resultSE.m_impactPos);
+		result.m_impactNormal = capsuleLtoW.TransformVectorQuantity3D(resultSE.m_impactNormal);
+		result.m_impactDist = (result.m_impactPos - startPos).GetLength();
+	}
 
 	return result;
 }
@@ -797,6 +853,170 @@ RaycastResult3D RaycastVsZCynlinder3D(Vec3 startPos, Vec3 fwdNormal, float maxDi
 	return result;
 }
 
+RaycastResult3D RaycastVsZCynlinder3DNoCap(Vec3 startPos, Vec3 fwdNormal, float maxDist, Vec2 cylCenterXY, FloatRange cylMinMaxZ, float cylRadius)
+{
+	RaycastResult3D result;
+	result.m_rayStartPos = startPos;
+	result.m_rayFwdNormal = fwdNormal;
+	result.m_rayMaxLength = maxDist;
+
+	// Is point inside, return
+	if (IsPointInsideZCylinder3D(startPos, cylCenterXY, cylMinMaxZ, cylRadius))
+	{
+		result.m_didImpact = true;
+		result.m_impactPos = startPos;
+		result.m_impactDist = 0;
+		result.m_impactNormal = fwdNormal * -1.f;
+		return result;
+	}
+
+	Vec2 startPosXY = Vec2(startPos.x, startPos.y);
+	Vec2 fwdNormalXY = Vec2(fwdNormal.x, fwdNormal.y).GetNormalized();
+
+	Vec2 toDiscCenter = cylCenterXY - startPosXY;
+	Vec2& iBasis = fwdNormalXY;
+	Vec2 jBasis = iBasis.GetRotated90Degrees();
+	float altitude = DotProduct2D(toDiscCenter, jBasis);
+
+	// If too far left or right, return
+	if (altitude >= cylRadius)
+	{
+		result.m_didImpact = false;
+		return result;
+	}
+	if (altitude <= -cylRadius)
+	{
+		result.m_didImpact = false;
+		return result;
+	}
+
+	Vec3 endPos = startPos + fwdNormal * maxDist;
+	// Come and go in Z
+	FloatRange zRange;
+	bool zFlip = false;
+
+	if ((endPos.z - startPos.z) == 0)
+	{
+		zRange.m_min = INFINITY * -1;
+		zRange.m_max = INFINITY;
+	}
+	else
+	{
+		float oneOverZRange = 1.f / (endPos.z - startPos.z);
+		zRange.m_min = (cylMinMaxZ.m_min - startPos.z) * oneOverZRange;
+		zRange.m_max = (cylMinMaxZ.m_max - startPos.z) * oneOverZRange;
+	}
+
+	if (zRange.m_min > zRange.m_max)
+	{
+		float temp = zRange.m_min;
+		zRange.m_min = zRange.m_max;
+		zRange.m_max = temp;
+		zFlip = true;
+	}
+
+	// Come and go in cylinder's body
+	float a = sqrtf((cylRadius * cylRadius) - (altitude * altitude));
+	float SCi = DotProduct2D(toDiscCenter, iBasis);
+	float impactInXYDist = SCi - a;
+	float impactOutXYDist = SCi + a;
+
+	FloatRange tRange;
+	float oneOverTRange = 1.f / (Vec2(endPos.x, endPos.y) - Vec2(startPos.x, startPos.y)).GetLength();
+	tRange.m_min = impactInXYDist * oneOverTRange;
+	tRange.m_max = impactOutXYDist * oneOverTRange;
+
+	if (tRange.IsOverlappingWith(zRange))
+	{
+		FloatRange OverlapRange;
+		bool isHitOnCap = false;
+
+		if (zRange.m_min > tRange.m_min)
+		{
+			OverlapRange.m_min = zRange.m_min;
+			isHitOnCap = true;
+		}
+		else
+		{
+			OverlapRange.m_min = tRange.m_min;
+		}
+		if (zRange.m_max < tRange.m_max)
+		{
+			OverlapRange.m_max = zRange.m_max;
+		}
+		else
+		{
+			OverlapRange.m_max = tRange.m_max;
+		}
+
+		result.m_didImpact = true;
+		result.m_impactDist = maxDist * OverlapRange.m_min;
+
+		if (result.m_impactDist > maxDist || result.m_impactDist < 0.0f)
+		{
+			result.m_didImpact = false;
+			return result;
+		}
+
+		result.m_impactPos = startPos + fwdNormal * result.m_impactDist;
+		if (isHitOnCap)
+		{
+			result.m_didImpact = false;
+		}
+		else
+		{
+			result.m_impactNormal = (result.m_impactPos - Vec3(cylCenterXY.x, cylCenterXY.y, result.m_impactPos.z)).GetNormalized();
+		}
+	}
+
+	return result;
+}
+
+RaycastResult3D RaycastVsTriangle(Vec3 startPos, Vec3 fwdNormal, float maxDist, Vec3 v0, Vec3 v1, Vec3 v2)
+{
+	RaycastResult3D result;
+	result.m_rayStartPos = startPos;
+	result.m_rayFwdNormal = fwdNormal;
+	result.m_rayMaxLength = maxDist;
+
+	Vec3 e1 = v1 - v0;
+	Vec3 e2 = v2 - v0;
+
+	Vec3 triaN = e1.Cross(e2).GetNormalized();
+
+	Vec3 endPos = startPos + fwdNormal * maxDist;
+
+	float dotStart = DotProduct3D((v0 - startPos), triaN);
+	float dotEnd = DotProduct3D((v0 - endPos), triaN);
+
+	if (dotStart * dotEnd >= 0.f) return result;
+
+	float t = dotStart / DotProduct3D((endPos - startPos), triaN);
+	Vec3 interactionPoint = startPos + fwdNormal * maxDist * t;
+
+	Vec3 i0 = interactionPoint - v0;
+	Vec3 i1 = interactionPoint - v1;
+	Vec3 i2 = interactionPoint - v2;
+
+	Vec3 v0v1 = v1 - v0;
+	Vec3 v1v2 = v2 - v1;
+	Vec3 v2v0 = v0 - v2;
+
+	bool test1 = (v0v1.Cross(i0)).Dot(triaN) > 0;
+	bool test2 = (v1v2.Cross(i1)).Dot(triaN) > 0;
+	bool test3 = (v2v0.Cross(i2)).Dot(triaN) > 0;
+
+	if (test1 && test2 && test3)
+	{
+		result.m_didImpact = true;
+		result.m_impactPos = interactionPoint;
+		result.m_impactNormal = triaN;
+		result.m_impactDist = maxDist * t;
+	}
+
+	return result;
+}
+
 void MouseToRaycast(Camera* camera, Vec2 cursorPosition, Vec3& out_startPos, Vec3& out_forwardDir)
 {
 	Mat44 cameraMatrix = camera->GetModelMatrix();
@@ -834,7 +1054,7 @@ RaycastResult3D MouseRaycastVsSphere3D(Camera* camera, Vec2 cursorPosition, Vec3
 	Vec3 fwd;
 	MouseToRaycast(camera, cursorPosition, start, fwd);
 
-	return RaycastVsSphere3D(start, fwd, FLT_MAX, center, radius);
+	return RaycastVsSphere3D(start, fwd, 1000.f, center, radius);
 }
 
 RaycastResult3D MouseRaycastVsCapsule3D(Camera* camera, Vec2 cursorPosition, Capsule3 capsule)
@@ -843,5 +1063,76 @@ RaycastResult3D MouseRaycastVsCapsule3D(Camera* camera, Vec2 cursorPosition, Cap
 	Vec3 fwd;
 	MouseToRaycast(camera, cursorPosition, start, fwd);
 
-	return RaycastVsCapsule3D(start, fwd, FLT_MAX, capsule);
+	return RaycastVsCapsule3D(start, fwd, 1000.f, capsule);
+}
+
+ConvexRaycast2D RaycastVsConvex2D_MoreDetail(Vec2 startPos, Vec2 fwdNormal, float maxDist, ConvexHull2 convex)
+{
+	ConvexRaycast2D result;
+	result.m_rayStartPos = startPos;
+	result.m_rayFwdNormal = fwdNormal;
+	result.m_rayMaxLength = maxDist;
+
+	result.m_lastestEntry = startPos;
+	result.m_earliestExit = startPos + fwdNormal * maxDist;
+	Plane2 hitPlane;
+
+	for (size_t i = 0; i < convex.GetSize(); i++)
+	{
+		Plane2 plane = convex.GetPlanes()[i];
+
+		RaycastResult2D localResult = RaycastVsPlane2D(startPos, fwdNormal, maxDist, plane);
+
+		if (localResult.m_didImpact)
+		{
+			if (DotProduct2D(fwdNormal, plane.m_normal) < 0)
+			{
+				Vec2 entry = localResult.m_impactPos;
+				result.m_allEntries.push_back(entry);
+				if ((entry - startPos).GetLengthSquared() > (result.m_lastestEntry - startPos).GetLengthSquared())
+				{
+					result.m_lastestEntry = entry;
+					hitPlane = plane;
+				}
+			}
+
+			if (DotProduct2D(fwdNormal, plane.m_normal) > 0)
+			{
+				Vec2 exit = localResult.m_impactPos;
+				result.m_allExits.push_back(exit);
+				if ((exit - startPos).GetLengthSquared() < (result.m_earliestExit - startPos).GetLengthSquared())
+				{
+					result.m_earliestExit = exit;
+				}
+			}
+		}
+	}
+
+	if ((result.m_earliestExit - startPos).GetLengthSquared() < (result.m_lastestEntry - startPos).GetLengthSquared())
+	{
+		result.m_didImpact = false;
+		return result;
+	}
+
+	result.m_midPoint = result.m_lastestEntry + (result.m_earliestExit - result.m_lastestEntry) * 0.5f;
+
+	if (convex.IsPointInside(result.m_midPoint))
+	{
+		result.m_didImpact = true;
+		result.m_impactPos = result.m_lastestEntry;
+		result.m_impactNormal = hitPlane.m_normal;
+		result.m_impactDist = (result.m_lastestEntry - startPos).GetLength();
+
+	}
+
+	if (convex.IsPointInside(startPos))
+	{
+		result.m_didImpact = true;
+		result.m_impactPos = startPos;
+		result.m_impactNormal = -fwdNormal;
+		result.m_impactDist = 0.f;
+	}
+
+
+	return result;
 }

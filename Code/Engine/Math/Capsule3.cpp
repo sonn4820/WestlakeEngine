@@ -31,6 +31,11 @@ Vec3 Capsule3::GetAxis() const
 	return m_end - m_start;
 }
 
+Vec3 Capsule3::GetCenter() const
+{
+	return m_start + GetAxis() * 0.5f;
+}
+
 Vec3 Capsule3::GetAxisNormal() const
 {
 	return (m_end - m_start).GetNormalized();

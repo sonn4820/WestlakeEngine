@@ -58,6 +58,7 @@ struct CollisionInfo
 	bool isColliding = false;
 	DoubleVec3 contactPoint;
 	DoubleVec3 normal;
+	double penDepth;
 };
 
 //Angle Utilities
@@ -78,6 +79,7 @@ float GetTurnedTowardDegrees(float currentDegrees, float goalDegrees, float maxD
 float GetAngleDegreesBetweenVectors2D(Vec2 const& a, Vec2 const& b);
 float GetAngleDegreesBetweenVectors3D(Vec3 const& a, Vec3 const& b);
 float GetNormalizedAngle(float angle);
+
 
 //Basic 2D and 3D Utilities
 float GetDistance2D(Vec2 const& positionA, Vec2 const& positionB);
@@ -212,18 +214,19 @@ bool PushSphereOutOfOBB3_Double(DoubleVec3& center, double radius, DoubleOBB3 co
 bool PushSphereOutOfCapsule3_Double(DoubleVec3& center, double radius, DoubleCapsule3& capsule, bool isCapsuleStatic);
 bool PushSphereOutOfPoint3D_Double(DoubleVec3& center, double radius, DoubleVec3 const& point);
 
-bool PushCapsuleOutOfPoint3D(Capsule3& capsule, Vec3 const& point, bool fixLength = true);
-bool PushCapsuleOutOfPlane3D(Capsule3& capsule, Plane3 const& plane, bool fixLength = true);
-bool PushCapsuleOutOfAABB3D(Capsule3& capsule, AABB3 const& box, bool fixLength = true);
-bool PushCapsuleOutOfOBB3D(Capsule3& capsule, OBB3 const& box, bool fixLength = true);
+bool PushCapsuleOutOfPoint3D(Capsule3& capsule, Vec3 const& point);
+bool PushCapsuleOutOfPlane3D(Capsule3& capsule, Plane3 const& plane);
+bool PushCapsuleOutOfAABB3D(Capsule3& capsule, AABB3 const& box);
+bool PushCapsuleOutOfOBB3D(Capsule3& capsule, OBB3 const& box);
 bool PushCapsuleOutOfCapsule3D(Capsule3& capsuleA, Capsule3& capsuleB, bool isBStatic = true);
 bool PushCapsuleOutOfSphere3D(Capsule3& capsule, Vec3& sCenter, float sRadius, bool isSphereStatic = true);
 
 bool PushSphereOutOfPoint3D_Double(DoubleVec3& center, double radius, DoubleVec3 const& point);
-bool PushCapsuleOutOfPoint3D_Double(DoubleCapsule3& capsule, DoubleVec3 const& point, bool fixLength = true);
-bool PushCapsuleOutOfPlane3D_Double(DoubleCapsule3& capsule, DoublePlane3 const& plane, bool fixLength = true);
-bool PushCapsuleOutOfAABB3D_Double(DoubleCapsule3& capsule, DoubleAABB3 const& box, bool fixLength = true);
-bool PushCapsuleOutOfOBB3D_Double(DoubleCapsule3& capsule, DoubleOBB3 const& box, bool fixLength = true);
+bool PushCapsuleOutOfPoint3D_Double(DoubleCapsule3& capsule, DoubleVec3 const& point);
+bool PushCapsuleOutOfPlane3D_Double(DoubleCapsule3& capsule, DoublePlane3 const& plane);
+bool PushCapsuleOutOfAABB3D_Double(DoubleCapsule3& capsule, DoubleAABB3 const& box);
+bool PushCapsuleOutOfAABB3D_Double(DoubleVec3& start, DoubleVec3& end, double radius, DoubleAABB3 const& box);
+bool PushCapsuleOutOfOBB3D_Double(DoubleCapsule3& capsule, DoubleOBB3 const& box);
 
 bool PushSphereOutOfSphere3D_Double(DoubleVec3& posA, double radiusA, DoubleVec3& posB, double radiusB, bool isBStatic = true);
 bool PushCapsuleOutOfCapsule3D_Double(DoubleCapsule3& capsuleA, DoubleCapsule3& capsuleB, bool isBStatic = true);

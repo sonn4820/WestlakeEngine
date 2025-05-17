@@ -140,8 +140,8 @@ void Panel::SetBound(AABB2 bound)
 
 	if (m_hasBorder)
 	{
-		AddVertsForAABB2D(m_borderVerts, m_bound, m_borderColor);
-		AddVertsForAABB2D(m_panelVerts, m_bound.AddOffSet(5.f));
+		AddVertsForAABB2DOutline(m_borderVerts, m_bound, m_borderColor, 5.f);
+		AddVertsForAABB2D(m_panelVerts, m_bound.AddOffSet(2.5f));
 	}
 	else
 	{

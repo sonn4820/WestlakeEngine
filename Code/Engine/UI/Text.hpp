@@ -24,6 +24,7 @@ public:
 	Vec2 GetPosition() const;
 
 	void SetText(std::string text);
+	void SetColor(Rgba8 color);
 
 protected:
 	Canvas* m_canvas = nullptr;

@@ -19,12 +19,14 @@ void TransformVertexArray3D(std::vector<Vertex_PCU>& verts, const Mat44& transfo
 AABB2 GetVertexBounds2D(const std::vector<Vertex_PCU>& verts);
 
 // 2D
+void AddVertsForTriagle2D(std::vector<Vertex_PCU>& verts, Vec2 const& p0, Vec2 const& p1, Vec2 const& p2, Rgba8 const& color);
 void AddVertsForCapsule2D(std::vector<Vertex_PCU>& verts, Capsule2 const& capsule, Rgba8 const& color);
 void AddVertsForCapsule2D(std::vector<Vertex_PCU>& verts, Vec2 const& boneStart, Vec2 const& boneEnd, float radius, Rgba8 const& color);
 void AddVertsForDisc2D(std::vector<Vertex_PCU>& verts, Vec2 const& center, float radius, Rgba8 const& color, int sides = 32);
 void AddVertsForDisc2DGradient(std::vector<Vertex_PCU>& verts, Vec2 const& center, float radius, Rgba8 const& innerColor, Rgba8 const& outerColor, int sides = 32);
 void AddVertsForRing2D(std::vector<Vertex_PCU>& verts, Vec2 const& center, float radius, float thickness, Rgba8 const& color, int sides = 32);
 void AddVertsForAABB2D(std::vector<Vertex_PCU>& verts, AABB2 const& bounds, Rgba8 const& color = Rgba8::COLOR_WHITE, Vec2 uvMins = Vec2::ZERO, Vec2 uvMaxs = Vec2::ONE);
+void AddVertsForAABB2D2Color(std::vector<Vertex_PCU>& verts, AABB2 const& bounds, Rgba8 const& colorStart = Rgba8::COLOR_WHITE, Rgba8 const& colorEnd = Rgba8::COLOR_WHITE, Vec2 uvMins = Vec2::ZERO, Vec2 uvMaxs = Vec2::ONE);
 void AddVertsForAABB2DOutline(std::vector<Vertex_PCU>& verts, AABB2 const& bounds, Rgba8 const& color = Rgba8::COLOR_WHITE, float lineThickness = 0.005);
 void AddVertsForOBB2D(std::vector<Vertex_PCU>& verts, OBB2 const& orientedBox, Rgba8 const& color);
 void AddVertsForOBB2D(std::vector<Vertex_PCU>& verts, Vec2 const& center, Vec2 const& ibasis, Vec2 const& halfDimension, Rgba8 const& color);
@@ -57,6 +59,7 @@ void AddVertsForSphere(std::vector<Vertex_PCU>& verts, const Vec3& center, float
 void AddVertsForSphere(std::vector<Vertex_PCU>& verts, std::vector<unsigned int>& indexes, const Vec3& center, float radius, Rgba8 const& color = Rgba8::COLOR_WHITE, AABB2 const& UVs = AABB2::ZERO_TO_ONE, int numLatitudeSlices = 32, int numLongtitudeSlices = 64);
 void AddVertsForSphere(std::vector<Vertex_PCUTBN>& verts, const Vec3& center, float radius, Rgba8 const& color = Rgba8::COLOR_WHITE, AABB2 const& UVs = AABB2::ZERO_TO_ONE, int numLatitudeSlices = 32, int numLongtitudeSlices = 64);
 void AddVertsForSphere(std::vector<Vertex_PCUTBN>& verts, std::vector<unsigned int>& indexes, const Vec3& center, float radius, Rgba8 const& color = Rgba8::COLOR_WHITE, AABB2 const& UVs = AABB2::ZERO_TO_ONE, int numLatitudeSlices = 32, int numLongtitudeSlices = 64);
+void AddVertsForLine3D(std::vector<Vertex_PCU>& verts, const Vec3& start, const Vec3& end, float radius, Rgba8& color = Rgba8::COLOR_WHITE, int numSlices = 8);
 void AddVertsForCylinder3D(std::vector<Vertex_PCU>& verts, const Vec3& start, const Vec3& end, float radius, const Rgba8& color = Rgba8::COLOR_WHITE, const AABB2& UVs = AABB2::ZERO_TO_ONE, int numSlices = 8);
 void AddVertsForCylinder3DNoCap(std::vector<Vertex_PCU>& verts, const Vec3& start, const Vec3& end, float radius, const Rgba8& color = Rgba8::COLOR_WHITE, const AABB2& UVs = AABB2::ZERO_TO_ONE, int numSlices = 8);
 void AddVertsForCylinder3D(std::vector<Vertex_PCU>& verts, std::vector<unsigned int>& indexes , const Vec3& start, const Vec3& end, float radius, const Rgba8& color = Rgba8::COLOR_WHITE, const AABB2& UVs = AABB2::ZERO_TO_ONE, int numSlices = 32);

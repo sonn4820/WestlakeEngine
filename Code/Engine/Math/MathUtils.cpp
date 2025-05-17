@@ -102,14 +102,11 @@ float GetAngleDegreesBetweenVectors2D(Vec2 const& a, Vec2 const& b)
 
 float GetAngleDegreesBetweenVectors3D(Vec3 const& a, Vec3 const& b)
 {
-	float dotProduct = DotProduct3D(a, b);
-	float aLength = a.GetLength();
-	float blength = b.GetLength();
+	Vec3 cross = CrossProduct3D(a, b);
+	float crossMag = cross.GetLength();
+	float dot = DotProduct3D(a, b);
 
-	float angleRads = acosf(dotProduct / (aLength * blength));
-	float angleDegrees = ConvertRadiansToDegrees(angleRads);
-
-	return angleDegrees;
+	return atan2f(crossMag, dot);
 }
 
 float GetNormalizedAngle(float angle)
@@ -150,7 +147,7 @@ float GetDistanceXY3D(Vec3 const& positionA, Vec3 const& positionB)
 {
 	float x = positionB.x - positionA.x;
 	float y = positionB.y - positionA.y;
-	return Vec2(x,y).GetLength();
+	return Vec2(x, y).GetLength();
 }
 //..............................
 float GetDistanceXYSquared3D(Vec3 const& positionA, Vec3 const& positionB)
@@ -694,12 +691,16 @@ CollisionInfo DoCapsuleAndAABBOverlap3D_Info(DoubleCapsule3 const& capsule, Doub
 	{
 		returnValue.isColliding = true;
 		returnValue.contactPoint = GetNearestPointOnAABB3D_Double(capsule.m_start, box);
+		returnValue.normal = (capsule.m_start - box.GetCenter()).GetNormalized();
+		returnValue.penDepth = capsule.m_radius - (returnValue.contactPoint - capsule.m_start).GetLength();
 		return returnValue;
 	}
 	if (DoSphereAndAABBOverlap3D_Double(capsule.m_end, capsule.m_radius, box))
 	{
 		returnValue.isColliding = true;
 		returnValue.contactPoint = GetNearestPointOnAABB3D_Double(capsule.m_end, box);
+		returnValue.normal = (capsule.m_end - box.GetCenter()).GetNormalized();
+		returnValue.penDepth = capsule.m_radius - (returnValue.contactPoint - capsule.m_end).GetLength();
 		return returnValue;
 	}
 
@@ -750,8 +751,9 @@ CollisionInfo DoCapsuleAndAABBOverlap3D_Info(DoubleCapsule3 const& capsule, Doub
 	if (IsPointInsideAABB3D(nearestPointBone, box))
 	{
 		returnValue.isColliding = true;
-		returnValue.contactPoint = bestNearestPointAABB;
-		returnValue.normal = (bestNearestPointAABB - box.GetCenter()).GetNormalized();
+		returnValue.contactPoint = nearestPointBone;
+		returnValue.normal = (nearestPointBone - box.GetCenter()).GetNormalized();
+		returnValue.penDepth = capsule.m_radius;
 		return returnValue;
 	}
 	else
@@ -762,7 +764,8 @@ CollisionInfo DoCapsuleAndAABBOverlap3D_Info(DoubleCapsule3 const& capsule, Doub
 		{
 			returnValue.isColliding = true;
 			returnValue.contactPoint = bestNearestPointAABB;
-			returnValue.normal = (bestNearestPointAABB - box.GetCenter()).GetNormalized();
+			returnValue.normal = displacement.GetNormalized();
+			returnValue.penDepth = capsule.m_radius - sqrt(distanceSquared);
 			return returnValue;
 		}
 	}
@@ -804,7 +807,8 @@ CollisionInfo DoCapsuleAndSphereOverlap3D_Info(DoubleCapsule3 const& capsule, Do
 	{
 		returnValue.isColliding = true;
 		returnValue.contactPoint = GetNearestPointOnSphere3D_Double(nearestPointToBone, center, radius);
-		returnValue.normal = (returnValue.contactPoint - center).GetNormalized();
+		returnValue.normal = fromSphereCenterToBone.GetNormalized();
+		returnValue.penDepth = (capsule.m_radius + radius - sqrt(distanceFromSphereToBoneSquared)) * 0.5;
 	}
 
 	return returnValue;
@@ -834,6 +838,7 @@ CollisionInfo DoCapsulesOverlap3D_Info(DoubleCapsule3 const& capsuleA, DoubleCap
 
 		returnValue.contactPoint = capPoints[1] + dist2Points.GetNormalized() * (capsuleB.m_radius - offset * 0.5);
 		returnValue.normal = (capPoints[0] - capPoints[1]).GetNormalized();
+		returnValue.penDepth = (capsuleA.m_radius + capsuleB.m_radius - (capPoints[0] - capPoints[1]).GetLength()) * 0.5;
 	}
 
 	return returnValue;
@@ -850,6 +855,8 @@ CollisionInfo DoSpheresOverlap3D_Info(DoubleVec3 const& centerA, double radiusA,
 		DoubleVec3 AtoB = centerB - centerA;
 		double offset = (radiusA + radiusB) - AtoB.GetLength();
 		returnValue.contactPoint = centerA + AtoB.GetNormalized() * (radiusA - offset * 0.5);
+		returnValue.normal = AtoB.GetNormalized();
+		returnValue.penDepth = offset * 0.5;
 	}
 
 	return returnValue;
@@ -1699,7 +1706,7 @@ bool PushSphereOutOfPoint3D(Vec3& center, float radius, Vec3 const& point)
 	return true;
 }
 
-bool PushCapsuleOutOfPoint3D(Capsule3& capsule, Vec3 const& point, bool fixLength)
+bool PushCapsuleOutOfPoint3D(Capsule3& capsule, Vec3 const& point)
 {
 	if (!IsPointInsideCapsule3D(point, capsule))
 	{
@@ -1721,15 +1728,11 @@ bool PushCapsuleOutOfPoint3D(Capsule3& capsule, Vec3 const& point, bool fixLengt
 		capsule.m_end += (pointToEnd.GetNormalized() * penDepth);
 		isPushed |= true;
 	}
-	if (isPushed && fixLength)
-	{
-		capsule.FixLength();
-	}
 
 	return isPushed;
 }
 
-bool PushCapsuleOutOfPlane3D(Capsule3& capsule, Plane3 const& plane, bool fixLength)
+bool PushCapsuleOutOfPlane3D(Capsule3& capsule, Plane3 const& plane)
 {
 	bool result = false;
 
@@ -1760,15 +1763,15 @@ bool PushCapsuleOutOfPlane3D(Capsule3& capsule, Plane3 const& plane, bool fixLen
 	}
 
 	Vec3 nearestStart = plane.GetNearestPoint(capsule.m_start);
-	result |= PushCapsuleOutOfPoint3D(capsule, nearestStart, fixLength);
+	result |= PushCapsuleOutOfPoint3D(capsule, nearestStart);
 
 	Vec3 nearestEnd = plane.GetNearestPoint(capsule.m_end);
-	result |= PushCapsuleOutOfPoint3D(capsule, nearestEnd, fixLength);
+	result |= PushCapsuleOutOfPoint3D(capsule, nearestEnd);
 
 	return result;
 }
 
-bool PushCapsuleOutOfAABB3D(Capsule3& capsule, AABB3 const& aabb, bool fixLength)
+bool PushCapsuleOutOfAABB3D(Capsule3& capsule, AABB3 const& aabb)
 {
 	if (DoSphereAndAABBOverlap3D(capsule.m_start, capsule.m_radius, aabb))
 	{
@@ -1781,10 +1784,7 @@ bool PushCapsuleOutOfAABB3D(Capsule3& capsule, AABB3 const& aabb, bool fixLength
 
 		capsule.m_start += penDir * pushEndRatio;
 		capsule.m_end += penDir * pushStartRatio;
-		if (fixLength)
-		{
-			capsule.FixLength();
-		}
+
 		return true;
 	}
 
@@ -1799,10 +1799,7 @@ bool PushCapsuleOutOfAABB3D(Capsule3& capsule, AABB3 const& aabb, bool fixLength
 
 		capsule.m_start += penDir * pushStartRatio;
 		capsule.m_end += penDir * pushEndRatio;
-		if (fixLength)
-		{
-			capsule.FixLength();
-		}
+
 		return true;
 	}
 
@@ -1861,10 +1858,7 @@ bool PushCapsuleOutOfAABB3D(Capsule3& capsule, AABB3 const& aabb, bool fixLength
 			displacement.SetLength(displacement.GetLength() + capsule.m_radius);
 			capsule.m_start += displacement;
 			capsule.m_end += displacement;
-			if (fixLength)
-			{
-				capsule.FixLength();
-			}
+
 			return true;
 		}
 	}
@@ -1878,10 +1872,7 @@ bool PushCapsuleOutOfAABB3D(Capsule3& capsule, AABB3 const& aabb, bool fixLength
 			displacement.SetLength(offset);
 			capsule.m_start += displacement;
 			capsule.m_end += displacement;
-			if (fixLength)
-			{
-				capsule.FixLength();
-			}
+
 			return true;
 		}
 	}
@@ -1889,7 +1880,7 @@ bool PushCapsuleOutOfAABB3D(Capsule3& capsule, AABB3 const& aabb, bool fixLength
 	return false;
 }
 
-bool PushCapsuleOutOfOBB3D(Capsule3& capsule, OBB3 const& obb, bool fixLength /*= true*/)
+bool PushCapsuleOutOfOBB3D(Capsule3& capsule, OBB3 const& obb)
 {
 	Vec3 kBasisNormal = CrossProduct3D(obb.m_iBasisNormal, obb.m_jBasisNormal);
 
@@ -1906,14 +1897,10 @@ bool PushCapsuleOutOfOBB3D(Capsule3& capsule, OBB3 const& obb, bool fixLength /*
 	localCapsule.m_start = obbWtoL.TransformPosition3D(capsule.m_start);
 	localCapsule.m_end = obbWtoL.TransformPosition3D(capsule.m_end);
 
-	if (PushCapsuleOutOfAABB3D(localCapsule, aabb, false))
+	if (PushCapsuleOutOfAABB3D(localCapsule, aabb))
 	{
 		capsule.m_start = obbLtoW.TransformPosition3D(localCapsule.m_start);
 		capsule.m_end = obbLtoW.TransformPosition3D(localCapsule.m_end);
-		if (fixLength)
-		{
-			capsule.FixLength();
-		}
 		return true;
 	}
 
@@ -2087,9 +2074,9 @@ bool PushSphereOutOfAABB3_Double(DoubleVec3& center, double radius, DoubleAABB3 
 	{
 		return false;
 	}
-	DoubleVec3 toSphereCenter = (center - box.GetNearestPoint(center));
-	DoubleVec3 penDir = toSphereCenter.GetNormalized() * (radius - toSphereCenter.GetLength());
-	center += penDir;
+	DoubleVec3 nearestPoint = box.GetNearestPoint(center);
+	DoubleVec3 toSphereCenter = (center - nearestPoint);
+	center = nearestPoint + toSphereCenter.GetNormalized() * radius;
 	return true;
 }
 
@@ -2190,7 +2177,7 @@ bool PushSphereOutOfPoint3D_Double(DoubleVec3& center, double radius, DoubleVec3
 	return true;
 }
 
-bool PushCapsuleOutOfPoint3D_Double(DoubleCapsule3& capsule, DoubleVec3 const& point, bool fixLength)
+bool PushCapsuleOutOfPoint3D_Double(DoubleCapsule3& capsule, DoubleVec3 const& point)
 {
 	DoubleVec3 pointOnBone = GetNearestPointOnLineSegment3D_Double(capsule.GetBone(), point);
 
@@ -2208,18 +2195,13 @@ bool PushCapsuleOutOfPoint3D_Double(DoubleCapsule3& capsule, DoubleVec3 const& p
 		capsule.m_start += pushDir * pushAEndRatio;
 		capsule.m_end += pushDir * pushAStartRatio;
 
-		if (fixLength)
-		{
-			capsule.FixLength();
-		}
-
 		return true;
 	}
 
 	return false;
 }
 
-bool PushCapsuleOutOfPlane3D_Double(DoubleCapsule3& capsule, DoublePlane3 const& plane, bool fixLength)
+bool PushCapsuleOutOfPlane3D_Double(DoubleCapsule3& capsule, DoublePlane3 const& plane)
 {
 	bool result = false;
 
@@ -2251,49 +2233,35 @@ bool PushCapsuleOutOfPlane3D_Double(DoubleCapsule3& capsule, DoublePlane3 const&
 	}
 
 	DoubleVec3 nearestStart = plane.GetNearestPoint(capsule.m_start);
-	result |= PushCapsuleOutOfPoint3D_Double(capsule, nearestStart, fixLength);
+	result |= PushCapsuleOutOfPoint3D_Double(capsule, nearestStart);
 
 	DoubleVec3 nearestEnd = plane.GetNearestPoint(capsule.m_end);
-	result |= PushCapsuleOutOfPoint3D_Double(capsule, nearestEnd, fixLength);
+	result |= PushCapsuleOutOfPoint3D_Double(capsule, nearestEnd);
 
 	return result;
 }
 
-bool PushCapsuleOutOfAABB3D_Double(DoubleCapsule3& capsule, DoubleAABB3 const& aabb, bool fixLength)
+bool PushCapsuleOutOfAABB3D_Double(DoubleCapsule3& capsule, DoubleAABB3 const& aabb)
 {
 	bool returnValue = false;
 
-	if (DoSphereAndAABBOverlap3D_Double(capsule.m_start, capsule.m_radius, aabb))
-	{
-		DoubleVec3 toSphereCenter = (capsule.m_start - aabb.GetNearestPoint(capsule.m_start));
-		double toSphereDist = toSphereCenter.GetLength();
-		DoubleVec3 penDir = toSphereCenter.GetNormalized() * (capsule.m_radius - toSphereDist);
-		double axisLength = capsule.GetAxisLength();
-		double pushStartRatio = toSphereDist / axisLength;
-		double pushEndRatio = (axisLength - toSphereDist) / axisLength;
+	DoubleVec3 axis = capsule.GetAxis();
 
-		capsule.m_start += penDir * pushEndRatio;
-		capsule.m_end += penDir * pushStartRatio;
+	if (PushSphereOutOfAABB3_Double(capsule.m_start, capsule.m_radius, aabb))
+	{
 		returnValue = true;
+		capsule.m_end = capsule.m_start + axis;
 	}
 
-	if (DoSphereAndAABBOverlap3D_Double(capsule.m_end, capsule.m_radius, aabb))
+	if (PushSphereOutOfAABB3_Double(capsule.m_end, capsule.m_radius, aabb))
 	{
-		DoubleVec3 toSphereCenter = (capsule.m_end - aabb.GetNearestPoint(capsule.m_end));
-		double toSphereDist = toSphereCenter.GetLength();
-		DoubleVec3 penDir = toSphereCenter.GetNormalized() * (capsule.m_radius - toSphereDist);
-		double axisLength = capsule.GetAxisLength();
-		double pushStartRatio = toSphereDist / axisLength;
-		double pushEndRatio = (axisLength - toSphereDist) / axisLength;
-
-		capsule.m_start += penDir * pushStartRatio;
-		capsule.m_end += penDir * pushEndRatio;
 		returnValue = true;
+		capsule.m_start = capsule.m_end - axis;
 	}
 
-	if (returnValue && fixLength)
+	if (returnValue)
 	{
-		capsule.FixLength();
+		return true;
 	}
 
 	// Best Possible Intersects
@@ -2302,7 +2270,6 @@ bool PushCapsuleOutOfAABB3D_Double(DoubleCapsule3& capsule, DoubleAABB3 const& a
 	double smallestDistanceSquared = DBL_MAX;
 	DoubleVec3 bestIntersectPoint = DoubleVec3(-DBL_MAX, -DBL_MAX, -DBL_MAX);
 	DoubleVec3 bestNearestPointAABB = DoubleVec3(-DBL_MAX, -DBL_MAX, -DBL_MAX);
-	DoubleVec3 axis = capsule.GetAxis();
 	double rayZScale = 1.0 / axis.z;
 	double rayYScale = 1.0 / axis.y;
 	double rayXScale = 1.0 / axis.x;
@@ -2351,10 +2318,6 @@ bool PushCapsuleOutOfAABB3D_Double(DoubleCapsule3& capsule, DoubleAABB3 const& a
 			displacement.SetLength(displacement.GetLength() + capsule.m_radius);
 			capsule.m_start += displacement;
 			capsule.m_end += displacement;
-			if (fixLength)
-			{
-				capsule.FixLength();
-			}
 			return true;
 		}
 	}
@@ -2368,23 +2331,105 @@ bool PushCapsuleOutOfAABB3D_Double(DoubleCapsule3& capsule, DoubleAABB3 const& a
 			displacement.SetLength(offset);
 			capsule.m_start += displacement;
 			capsule.m_end += displacement;
-			if (fixLength)
-			{
-				capsule.FixLength();
-			}
 			return true;
 		}
-	}
-
-	if (returnValue && fixLength)
-	{
-		//capsule.FixLength();
 	}
 
 	return returnValue;
 }
 
-bool PushCapsuleOutOfOBB3D_Double(DoubleCapsule3& capsule, DoubleOBB3 const& obb, bool fixLength)
+bool PushCapsuleOutOfAABB3D_Double(DoubleVec3& start, DoubleVec3& end, double radius, DoubleAABB3 const& box)
+{
+	bool returnValue = false;
+	DoubleVec3 axis = end - start;
+
+	if (PushSphereOutOfAABB3_Double(start, radius, box))
+	{
+		returnValue = true;
+		end = start + axis;
+	}
+
+	if (PushSphereOutOfAABB3_Double(end, radius, box))
+	{
+		returnValue = true;
+		start = end - axis;
+	}
+
+	// Best Possible Intersects
+	double tValues[6];
+	double bestTValue = DBL_MAX;
+	double smallestDistanceSquared = DBL_MAX;
+	DoubleVec3 bestIntersectPoint = DoubleVec3(-DBL_MAX, -DBL_MAX, -DBL_MAX);
+	DoubleVec3 bestNearestPointAABB = DoubleVec3(-DBL_MAX, -DBL_MAX, -DBL_MAX);
+	double rayZScale = 1.0 / axis.z;
+	double rayYScale = 1.0 / axis.y;
+	double rayXScale = 1.0 / axis.x;
+	tValues[0] = ((box.m_maxs.z - start.z) * rayZScale);
+	tValues[1] = ((box.m_mins.z - start.z) * rayZScale);
+	tValues[2] = ((box.m_maxs.y - start.y) * rayYScale);
+	tValues[3] = ((box.m_mins.y - start.y) * rayYScale);
+	tValues[4] = ((box.m_maxs.x - start.x) * rayXScale);
+	tValues[5] = ((box.m_mins.x - start.x) * rayXScale);
+
+	for (double tValue : tValues)
+	{
+		if (tValue >= 0.0 && tValue <= 1.0)
+		{
+			DoubleVec3 intersectPoint = start + (tValue * axis);
+			DoubleVec3 nearestPointAABB = box.GetNearestEdgePosition(intersectPoint);
+			double distanceSquared = GetDistanceSquared3D_Double(intersectPoint, nearestPointAABB);
+			if (distanceSquared < smallestDistanceSquared)
+			{
+				smallestDistanceSquared = distanceSquared;
+				bestIntersectPoint = intersectPoint;
+				bestNearestPointAABB = nearestPointAABB;
+				bestTValue = tValue;
+			}
+		}
+	}
+
+	// Doesn't hit
+	if (bestTValue < -1.0f || bestTValue > 2.0f)
+	{
+		return returnValue;
+	}
+
+	DoubleVec3 center = box.GetCenter();
+	DoubleVec3 nearestPointBone = GetNearestPointOnLineSegment3D_Double(start,end, bestNearestPointAABB);
+	bestNearestPointAABB = box.GetNearestEdgePosition(nearestPointBone);
+
+	if (IsPointInsideAABB3D_Double(nearestPointBone, box))
+	{
+		DoubleVec3 displacementCenterToBone = nearestPointBone - center;
+		DoubleVec3 displacementCenterToCorner = bestNearestPointAABB - center;
+
+		if (displacementCenterToBone.GetLengthSquared() < displacementCenterToCorner.GetLengthSquared())
+		{
+			DoubleVec3 displacement = bestNearestPointAABB - nearestPointBone;
+			displacement.SetLength(displacement.GetLength() + radius);
+			start += displacement;
+			end += displacement;
+			return true;
+		}
+	}
+	else
+	{
+		DoubleVec3 displacement = nearestPointBone - bestNearestPointAABB;
+		double distanceSquared = displacement.GetLengthSquared();
+		if (distanceSquared <radius * radius)
+		{
+			double offset = radius - sqrt(distanceSquared);
+			displacement.SetLength(offset);
+			start += displacement;
+			end += displacement;
+			return true;
+		}
+	}
+
+	return returnValue;
+}
+
+bool PushCapsuleOutOfOBB3D_Double(DoubleCapsule3& capsule, DoubleOBB3 const& obb)
 {
 	DoubleVec3 kBasisNormal = CrossProduct3D_Double(obb.m_iBasisNormal, obb.m_jBasisNormal);
 
@@ -2401,14 +2446,10 @@ bool PushCapsuleOutOfOBB3D_Double(DoubleCapsule3& capsule, DoubleOBB3 const& obb
 	localCapsule.m_start = obbWtoL.TransformPosition3D(capsule.m_start);
 	localCapsule.m_end = obbWtoL.TransformPosition3D(capsule.m_end);
 
-	if (PushCapsuleOutOfAABB3D_Double(localCapsule, aabb, false))
+	if (PushCapsuleOutOfAABB3D_Double(localCapsule, aabb))
 	{
 		capsule.m_start = obbLtoW.TransformPosition3D(localCapsule.m_start);
 		capsule.m_end = obbLtoW.TransformPosition3D(localCapsule.m_end);
-		if (fixLength)
-		{
-			capsule.FixLength();
-		}
 		return true;
 	}
 
@@ -3249,39 +3290,6 @@ bool BounceSphereOffStaticSphere3D_Double(DoubleVec3& mobileSpherePosition, doub
 	return true;
 }
 
-bool BounceCapsuleOffPoint3D_Double(DoubleCapsule3& capsule, DoubleVec3& startPointVel, DoubleVec3& endPointVel, double elasticity, DoubleVec3 point, double pointElasticity, double pointFriction, bool fixLength)
-{
-	UNUSED(startPointVel);
-	UNUSED(endPointVel);
-	UNUSED(elasticity);
-	UNUSED(pointElasticity);
-	UNUSED(pointFriction);
-	UNUSED(fixLength);
-	if (!PushCapsuleOutOfPoint3D_Double(capsule, point, fixLength))
-	{
-		return false;
-	}
-
-
-	return true;
-}
-
-bool BounceCapsuleOffPlane3D_Double(DoubleCapsule3& capsule, DoubleVec3& startPointVel, DoubleVec3& endPointVel, double elasticity, DoublePlane3 plane, double planeElasticity, double planeFriction /*= 0.f*/, bool fixLength /*= true*/)
-{
-	UNUSED(elasticity);
-	if (!PushCapsuleOutOfPlane3D_Double(capsule, plane, fixLength))
-	{
-		return false;
-	}
-	DoubleVec3 nearestStart = plane.GetNearestPoint(capsule.m_start);
-	BounceCapsuleOffPoint3D_Double(capsule, startPointVel, endPointVel, planeElasticity, nearestStart, planeFriction, fixLength);
-
-	DoubleVec3 nearestEnd = plane.GetNearestPoint(capsule.m_end);
-	BounceCapsuleOffPoint3D_Double(capsule, startPointVel, endPointVel, planeElasticity, nearestEnd, planeFriction, fixLength);
-
-	return true;
-}
-
 FloatRange ProjectVertices(std::vector<Vec2>& vertices, Vec2 axis)
 {
 	float min = axis.Dot(vertices[0]);
@@ -3302,7 +3310,7 @@ std::vector<Vec2> GetAxes(const std::vector<Vec2>& vertices)
 	std::vector<Vec2> axes;
 	axes.reserve(vertices.size());
 
-	for (size_t i = 0; i < vertices.size(); i++) 
+	for (size_t i = 0; i < vertices.size(); i++)
 	{
 		size_t j = (i + 1) % vertices.size();
 		Vec2 edge(vertices[j].x - vertices[i].x, vertices[j].y - vertices[i].y);
@@ -3330,18 +3338,18 @@ bool DoAABBOverlapConvexPoly2D(AABB2 box, ConvexPoly2 convex)
 	axes.insert(axes.end(), convexAxes.begin(), convexAxes.end());
 
 	// Test projection onto each axis
-	for (const auto& axis : axes) 
+	for (const auto& axis : axes)
 	{
 		auto aabbProj = ProjectVertices(aabbVertices, axis);
 		auto convexProj = ProjectVertices(convexVertices, axis);
 
-		if (aabbProj.m_max < convexProj.m_min || convexProj.m_max < aabbProj.m_min) 
+		if (aabbProj.m_max < convexProj.m_min || convexProj.m_max < aabbProj.m_min)
 		{
 			// Separating axis found
-			return false; 
+			return false;
 		}
 	}
 
 	// No separating axis found = collision
-	return true; 
+	return true;
 }

@@ -184,6 +184,22 @@ void AddVertsForAABB2D(std::vector<Vertex_PCU>& verts, AABB2 const& bounds, Rgba
 	verts.push_back(bottomLeft);
 }
 
+void AddVertsForAABB2D2Color(std::vector<Vertex_PCU>& verts, AABB2 const& bounds, Rgba8 const& colorStart /*= Rgba8::COLOR_WHITE*/, Rgba8 const& colorEnd /*= Rgba8::COLOR_WHITE*/, Vec2 uvMins /*= Vec2::ZERO*/, Vec2 uvMaxs /*= Vec2::ONE*/)
+{
+	Vertex_PCU topLeft = Vertex_PCU(Vec3(bounds.m_mins.x, bounds.m_maxs.y, 0), colorStart, Vec2(uvMins.x, uvMaxs.y));
+	Vertex_PCU topRight = Vertex_PCU(Vec3(bounds.m_maxs.x, bounds.m_maxs.y, 0), colorEnd, Vec2(uvMaxs.x, uvMaxs.y));
+	Vertex_PCU bottomLeft = Vertex_PCU(Vec3(bounds.m_mins.x, bounds.m_mins.y, 0), colorStart, Vec2(uvMins.x, uvMins.y));
+	Vertex_PCU bottomRight = Vertex_PCU(Vec3(bounds.m_maxs.x, bounds.m_mins.y, 0), colorEnd, Vec2(uvMaxs.x, uvMins.y));
+
+	verts.push_back(bottomLeft);
+	verts.push_back(bottomRight);
+	verts.push_back(topRight);
+
+	verts.push_back(topRight);
+	verts.push_back(topLeft);
+	verts.push_back(bottomLeft);
+}
+
 void AddVertsForAABB2DOutline(std::vector<Vertex_PCU>& verts, AABB2 const& bounds, Rgba8 const& color /*= Rgba8::COLOR_WHITE*/, float lineThickness /*= 0.005*/)
 {
 	Vec2 topLeft = Vec2(bounds.m_mins.x, bounds.m_maxs.y);
@@ -1014,6 +1030,60 @@ void AddVertsForSphere(std::vector<Vertex_PCU>& verts, std::vector<unsigned int>
 	}
 }
 
+void AddVertsForLine3D(std::vector<Vertex_PCU>& verts, const Vec3& start, const Vec3& end, float radius, Rgba8& color /*= Rgba8::COLOR_WHITE*/, int numSlices /*= 8*/)
+{
+	float stepAngle = 360.f / (float)numSlices;
+
+	Vec3 axis = end - start;
+	Vec3 kBasis = axis.GetNormalized();
+	Vec3 iBasis;
+	Vec3 jBasis;
+
+	if (fabs(DotProduct3D(kBasis, Vec3(1.f, 0.f, 0.f))) < 0.999f)
+	{
+		jBasis = CrossProduct3D(Vec3(1.f, 0.f, 0.f), kBasis).GetNormalized();
+		iBasis = CrossProduct3D(jBasis, kBasis);
+	}
+	else
+	{
+		iBasis = CrossProduct3D(kBasis, Vec3(0.f, 1.f, 0.f)).GetNormalized();
+		jBasis = CrossProduct3D(kBasis, iBasis);
+	}
+
+	for (int i = 0; i < numSlices; i++)
+	{
+		Vertex_PCU vertStart = Vertex_PCU(start, color, Vec2());
+
+		Vec2 startP1XY = Vec2::MakeFromPolarDegrees(stepAngle * i, radius);
+		Vec3 startP1Pos = start + iBasis * startP1XY.x + jBasis * startP1XY.y;
+		Vertex_PCU vertSP1 = Vertex_PCU(startP1Pos, color, Vec2());
+
+		Vec2 startP2XY = Vec2::MakeFromPolarDegrees(stepAngle * (i + 1), radius);
+		Vec3 startP2Pos = start + iBasis * startP2XY.x + jBasis * startP2XY.y;
+		Vertex_PCU vertSP2 = Vertex_PCU(startP2Pos, color, Vec2());
+
+		verts.push_back(vertStart);
+		verts.push_back(vertSP2);
+		verts.push_back(vertSP1);
+
+		Vertex_PCU vertEnd = Vertex_PCU(end, color, Vec2(0.5f, 0.5f));
+
+		Vec2 endP1XY = Vec2::MakeFromPolarDegrees(stepAngle * i, radius);
+		Vec3 endP1Pos = end + iBasis * endP1XY.x + jBasis * endP1XY.y;
+		Vertex_PCU vertEP1 = Vertex_PCU(endP1Pos, color, Vec2());
+
+		Vec2 endP2XY = Vec2::MakeFromPolarDegrees(stepAngle * (i + 1), radius);
+		Vec3 endP2Pos = end + iBasis * endP2XY.x + jBasis * endP2XY.y;
+		Vertex_PCU vertEP2 = Vertex_PCU(endP2Pos, color, Vec2());
+
+		verts.push_back(vertEnd);
+		verts.push_back(vertEP1);
+		verts.push_back(vertEP2);
+
+		AddVertsForQuad3D(verts, startP1Pos, startP2Pos, endP1Pos, endP2Pos, color, AABB2());
+	}
+}
+
 void TransformVertexArray3D(std::vector<Vertex_PCU>& verts, const Mat44& transform)
 {
 	for (int i = 0; i < (int)verts.size(); i++)
@@ -1050,6 +1120,17 @@ AABB2 GetVertexBounds2D(const std::vector<Vertex_PCU>& verts)
 	}
 
 	return AABB2(minX, minY, maxX, maxY);
+}
+
+void AddVertsForTriagle2D(std::vector<Vertex_PCU>& verts, Vec2 const& p0, Vec2 const& p1, Vec2 const& p2, Rgba8 const& color)
+{
+	Vertex_PCU v0 = Vertex_PCU(Vec3(p0,0), color, Vec2());
+	Vertex_PCU v1 = Vertex_PCU(Vec3(p1,0), color, Vec2());
+	Vertex_PCU v2 = Vertex_PCU(Vec3(p2,0), color, Vec2());
+
+	verts.push_back(v0);
+	verts.push_back(v1);
+	verts.push_back(v2);
 }
 
 void AddVertsForCylinder3D(std::vector<Vertex_PCU>& verts, const Vec3& start, const Vec3& end, float radius, const Rgba8& color, const AABB2& UVs, int numSlices)

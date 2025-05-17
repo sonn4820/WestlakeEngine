@@ -43,11 +43,11 @@ Camera* Canvas::GetCamera() const
 
 void Canvas::AddElementToCanvas(UIElement* element)
 {
-	for (size_t i = 0; i < m_uiElementsList.size(); i++)
+	for (auto & i : m_uiElementsList)
 	{
-		if (!m_uiElementsList[i])
+		if (!i)
 		{
-			m_uiElementsList[i] = element;
+			i = element;
 			return;
 		}
 	}
@@ -70,27 +70,27 @@ void Canvas::Startup()
 
 void Canvas::Update(float deltaSeconds)
 {
-	for (size_t i = 0; i < m_children.size(); i++)
+	for (auto & i : m_children)
 	{
-		m_children[i]->Update(deltaSeconds);
+		i->Update(deltaSeconds);
 	}
 }
 
 void Canvas::Render() const
 {
-	for (size_t i = 0; i < m_children.size(); i++)
+	for (auto i : m_children)
 	{
-		m_children[i]->Render();
+		i->Render();
 	}
 }
 
 void Canvas::Shutdown()
 {
-	for (size_t i = 0; i < m_children.size(); i++)
+	for (auto & i : m_children)
 	{
-		m_children[i]->Shutdown();
-		delete m_children[i];
-		m_children[i] = nullptr;
+		i->Shutdown();
+		delete i;
+		i = nullptr;
 	}
 
 	m_children.clear();

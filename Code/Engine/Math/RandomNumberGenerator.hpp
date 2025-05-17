@@ -1,5 +1,5 @@
 #pragma once
-
+#include <vector>
 
 struct FloatRange;
 
@@ -16,6 +16,8 @@ public:
 	float RollRandomFloatInRange(FloatRange range);
 	bool RollRandomChance(float rate);
 	int RollRandomSign();
+	template<typename T>
+	T RollRandomFromArray(std::vector<T> arr);
 
 	void SetSeed(int seed);
 
@@ -24,4 +26,10 @@ public:
 	int m_position = 0;
 };
 
+template<typename T>
+T RandomNumberGenerator::RollRandomFromArray(std::vector<T> arr)
+{
+	int index = RollRandomIntInRange(0, (int)arr.size() - 1);
+	return arr[index];
+}
 

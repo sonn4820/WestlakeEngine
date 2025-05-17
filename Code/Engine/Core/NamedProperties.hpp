@@ -68,13 +68,13 @@ T NamedProperties::GetValue(std::string const& keyName, T defaultValue) const
 	}
 	else
 	{
-		const std::type_info& a = typeid(*find->second);
-		const char* raw_name = a.name();
-		std::string as(raw_name);  // Convert to std::string
+		const std::type_info& data = typeid(*find->second);
+		const char* data_raw_name = data.name();
+		std::string data_s(data_raw_name);  // Convert to std::string
 
-		const std::type_info& b = typeid(TypedProperty<T>);
-		const char* r = b.name();
-		std::string bs(r);  // Convert to std::string
+		const std::type_info& type = typeid(TypedProperty<T>);
+		const char* type_raw_name = type.name();
+		std::string type_s(type_raw_name);  // Convert to std::string
 
 		TypedProperty<T>* asTypedProperty = dynamic_cast<TypedProperty<T>*>(find->second);
 		if (asTypedProperty)

@@ -106,7 +106,7 @@ void Text::SetTextSetting(TextSetting textSetting)
 {
 	m_textSetting = textSetting;
 	float width = m_canvas->GetSystemFont()->GetTextWidth(m_textSetting.m_height, m_textSetting.m_text, m_textSetting.m_aspect);
-	m_canvas->GetSystemFont()->AddVertsForText2D(m_textVerts, Vec2(-width * 0.5f, -m_textSetting.m_height * 0.5f), m_textSetting.m_height, m_textSetting.m_text, m_textSetting.m_color, m_textSetting.m_aspect, m_textSetting.m_lineOffset, m_textSetting.m_alignment.x);
+	m_canvas->GetSystemFont()->AddVertsForText2D(m_textVerts, Vec2(-width * m_textSetting.m_alignment.x, -m_textSetting.m_height * m_textSetting.m_alignment.y), m_textSetting.m_height, m_textSetting.m_text, Rgba8::COLOR_WHITE, m_textSetting.m_aspect, m_textSetting.m_lineOffset, m_textSetting.m_alignment.x);
 	//RotateText(m_textSetting.m_orientation);
 }
 
@@ -134,4 +134,9 @@ void Text::SetText(std::string text)
 	m_textSetting.m_text = text;
 	m_textVerts.clear();
 	SetTextSetting(m_textSetting);
+}
+
+void Text::SetColor(Rgba8 color)
+{
+	m_textSetting.m_color = color;
 }

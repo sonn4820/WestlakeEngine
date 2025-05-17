@@ -11,7 +11,7 @@ int FileReadToBuffer(std::vector<uint8_t>& outBuffer, const std::string& fileNam
 
 	if (!filePointer)
 	{
-		ERROR_AND_DIE("FILE IS NOT FOUND");
+		ERROR_RECOVERABLE("FILE IS NOT FOUND");
 	}
 
 	fseek(filePointer, 0, SEEK_END);
@@ -64,7 +64,7 @@ bool HasFile(std::string const& folderPathName)
 	return false;
 }
 
-int WriteBufferToFile(std::vector<unsigned char>& outBuffer, std::string const& fileName)
+bool WriteBufferToFile(std::vector<unsigned char>& outBuffer, std::string const& fileName)
 {
 	FILE* fileptr = nullptr;
 
@@ -74,9 +74,10 @@ int WriteBufferToFile(std::vector<unsigned char>& outBuffer, std::string const& 
 	{
 		fwrite(outBuffer.data(), sizeof(unsigned char), outBuffer.size(), fileptr);
 		fclose(fileptr);
+		return false;
 	}
 
-	return error;
+	return true;
 }
 
 bool LoadBinaryFileToExistingBuffer(std::string filePath, std::vector<unsigned char>& outBuffer)

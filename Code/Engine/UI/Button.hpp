@@ -46,9 +46,9 @@ public:
 	Texture* m_texturePressed = nullptr;
 	Texture* m_textureUnhover = nullptr;
 
-	Rgba8 m_colorUnhover = Rgba8(200, 200, 200);
-	Rgba8 m_colorHover = Rgba8(255, 255, 255);
-	Rgba8 m_colorPressed = Rgba8(150, 150, 150);
+	Rgba8 m_colorUnhover	= Rgba8(200, 200, 200);
+	Rgba8 m_colorHover		= Rgba8(255, 255, 255);
+	Rgba8 m_colorPressed	= Rgba8(150, 150, 150);
 
 	Rgba8 m_textColorUnhover = Rgba8(20, 20, 20);
 	Rgba8 m_textColorHover = Rgba8(0, 0, 0);
@@ -67,6 +67,9 @@ protected:
 
 	std::vector<Vertex_PCU> m_buttonVerts;
 	VertexBuffer* m_buttonBuffer = nullptr;
+
+	std::vector<Vertex_PCU> m_borderVerts;
+	VertexBuffer* m_borderBuffer = nullptr;
 
 	AABB2 m_bound;
 	TextSetting m_textSetting;

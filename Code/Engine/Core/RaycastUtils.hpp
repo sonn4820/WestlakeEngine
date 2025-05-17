@@ -40,6 +40,16 @@ struct RaycastResult3D
 	float	m_rayMaxLength = 1.f;
 };
 
+struct ConvexRaycast2D : public RaycastResult2D
+{
+	std::vector<Vec2> m_allEntries;
+	std::vector<Vec2> m_allExits;
+	Vec2 m_lastestEntry;
+	Vec2 m_earliestExit;
+	Vec2 m_midPoint;
+	uint64_t m_bits;
+};
+
 RaycastResult2D RaycastVsDisc2D(Vec2 startPos, Vec2 fwdNormal, float maxDist, Vec2 discCenter, float discRadius);
 RaycastResult2D RaycastVsLineSegments2D(Vec2 startPos, Vec2 fwdNormal, float maxDist, Vec2 linePointA, Vec2 linePointB);
 RaycastResult2D RaycastVsAABB2D(Vec2 startPos, Vec2 fwdNormal, float maxDist, AABB2 box);
@@ -52,8 +62,13 @@ RaycastResult3D RaycastVsPlane3D(Vec3 startPos, Vec3 fwdNormal, float maxDist, P
 RaycastResult3D RaycastVsSphere3D(Vec3 startPos, Vec3 fwdNormal, float maxDist, Vec3 sphereCenter, float sphereRadius);
 RaycastResult3D RaycastVsCapsule3D(Vec3 startPos, Vec3 fwdNormal, float maxDist, Capsule3 capsule);
 RaycastResult3D RaycastVsZCynlinder3D(Vec3 startPos, Vec3 fwdNormal, float maxDist, Vec2 cylCenterXY, FloatRange cylMinMaxZ, float cylRadius);
+RaycastResult3D RaycastVsZCynlinder3DNoCap(Vec3 startPos, Vec3 fwdNormal, float maxDist, Vec2 cylCenterXY, FloatRange cylMinMaxZ, float cylRadius);
+
+RaycastResult3D RaycastVsTriangle(Vec3 startPos, Vec3 fwdNormal, float maxDist, Vec3 v0, Vec3 v1, Vec3 v2);
 
 void MouseToRaycast(Camera* camera, Vec2 cursorPosition, Vec3& out_startPos, Vec3& out_forwardDir);
 RaycastResult3D MouseRaycastVsPlane3D(Camera* camera, Vec2 cursorPosition, Plane3 plane);
 RaycastResult3D MouseRaycastVsSphere3D(Camera* camera, Vec2 cursorPosition, Vec3 center, float radius);
 RaycastResult3D MouseRaycastVsCapsule3D(Camera* camera, Vec2 cursorPosition, Capsule3 capsule);
+
+ConvexRaycast2D RaycastVsConvex2D_MoreDetail(Vec2 startPos, Vec2 fwdNormal, float maxDist, ConvexHull2 convex);
